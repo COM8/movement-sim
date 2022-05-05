@@ -1,7 +1,9 @@
 #include "SimulationWidget.hpp"
 #include "sim/Simulator.hpp"
+#include "spdlog/fmt/bundled/core.h"
 #include <cassert>
 #include <string>
+#include <fmt/core.h>
 
 namespace ui::widgets {
 SimulationWidget::SimulationWidget() : simulator(sim::Simulator::get_instance()) {
@@ -36,7 +38,7 @@ void SimulationWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context>& ctx,
     ctx->save();
 
     // Stats:
-    std::string stats = std::to_string(simulator->get_tps()) + "/" + std::to_string(simulator->get_avg_tick_time().count());
+    std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {}ns", simulator->get_tps(), simulator->get_avg_tick_time().count());
     draw_text(stats, ctx, 5, 20);
 
     ctx->restore();

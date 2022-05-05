@@ -1,4 +1,5 @@
 #include "MainWindow.hpp"
+#include <cassert>
 #include <gtkmm/window.h>
 
 namespace ui::windows {
@@ -21,8 +22,13 @@ void MainWindow::prep_window() {
     headerBar->pack_end(inspectorBtn);
     set_titlebar(*headerBar);
 
+    // Settings:
+    mainBox.append(simulationSettingsBarWidget);
+
+    // Simulator:
     simulationWidget.set_expand();
-    set_child(simulationWidget);
+    mainBox.append(simulationWidget);
+    set_child(mainBox);
 }
 
 //-----------------------------Events:-----------------------------

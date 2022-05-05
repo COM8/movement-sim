@@ -1,13 +1,18 @@
 #pragma once
 
+#include "ui/widgets/SimulationSettingsBarWidget.hpp"
 #include "ui/widgets/SimulationWidget.hpp"
 #include <gtkmm.h>
+#include <gtkmm/box.h>
+#include <gtkmm/enums.h>
 
 namespace ui::windows {
 class MainWindow : public Gtk::Window {
  private:
     Gtk::Button inspectorBtn;
+    widgets::SimulationSettingsBarWidget simulationSettingsBarWidget;
     widgets::SimulationWidget simulationWidget;
+    Gtk::Box mainBox{Gtk::Orientation::VERTICAL};
 
  public:
     MainWindow();

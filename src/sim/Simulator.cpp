@@ -50,7 +50,9 @@ void Simulator::sim_worker() {
     SPDLOG_INFO("Simulation thread started.");
     std::unique_lock<std::mutex> lk(waitMutex);
     while (state == SimulatorState::RUNNING) {
-        waitCondVar.wait(lk);
+        if (!simulating) {
+            waitCondVar.wait(lk);
+        }
         if (!simulating) {
             continue;
         }
@@ -60,7 +62,7 @@ void Simulator::sim_worker() {
 
 void Simulator::sim_tick() {
     std::chrono::high_resolution_clock::time_point tickStart = std::chrono::high_resolution_clock::now();
-
+    std::this_thread::sleep_for(std::chrono::microseconds(10));  // Dummy load
     std::chrono::nanoseconds sinceLastTick = tickStart - lastTick;
     lastTick = tickStart;
 
@@ -122,6 +124,8 @@ void Simulator::add_tick_time(const std::chrono::nanoseconds& tickTime) {
         if (tickTimesIndex >= MAX_TICK_TIMES) {
             tickTimesIndex = 0;
         }
+    } else {
+        tickTimes.push_back(tickTime);
     }
 }
 }  // namespace sim
