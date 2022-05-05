@@ -1,4 +1,5 @@
 # Movement Simulator
+GPU accelerated human movement simulator.
 
 ## Building
 ### Requirements

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-set(PROJECT_DESCRIPTION "GPU accelarated human movement simulator.")
+set(PROJECT_DESCRIPTION "GPU accelerated human movement simulator.")
 project("mSim" 
             VERSION 0.1.0
             DESCRIPTION "${PROJECT_DESCRIPTION}"
