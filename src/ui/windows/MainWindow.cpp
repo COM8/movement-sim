@@ -1,4 +1,5 @@
 #include "MainWindow.hpp"
+#include <gtkmm/window.h>
 
 namespace ui::windows {
 MainWindow::MainWindow() { prep_window(); }
@@ -19,6 +20,9 @@ void MainWindow::prep_window() {
     inspectorBtn.signal_clicked().connect(&MainWindow::on_inspector_btn_clicked);
     headerBar->pack_end(inspectorBtn);
     set_titlebar(*headerBar);
+
+    simulationWidget.set_expand();
+    set_child(simulationWidget);
 }
 
 //-----------------------------Events:-----------------------------

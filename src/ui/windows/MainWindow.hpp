@@ -1,11 +1,13 @@
 #pragma once
 
+#include "ui/widgets/SimulationWidget.hpp"
 #include <gtkmm.h>
 
 namespace ui::windows {
 class MainWindow : public Gtk::Window {
  private:
     Gtk::Button inspectorBtn;
+    widgets::SimulationWidget simulationWidget;
 
  public:
     MainWindow();

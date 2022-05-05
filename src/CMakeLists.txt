@@ -7,6 +7,7 @@ SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 set(MAIN_EXECUTABLE ${PROJECT_NAME})
 
 add_subdirectory(logger)
+add_subdirectory(sim)
 add_subdirectory(ui)
 
 glib_add_resource_file(TARGET ui_resources
@@ -17,7 +18,7 @@ glib_add_resource_file(TARGET ui_resources
 
 add_executable(${MAIN_EXECUTABLE} main.cpp ${CMAKE_CURRENT_BINARY_DIR}/ui_resources.c)
 
-target_link_libraries(${MAIN_EXECUTABLE} PRIVATE logger ui)
+target_link_libraries(${MAIN_EXECUTABLE} PRIVATE logger ui sim)
 set_property(SOURCE main.cpp PROPERTY COMPILE_DEFINITIONS MOVEMENT_SIMULATOR_VERSION="${PROJECT_VERSION}" MOVEMENT_SIMULATOR_VERSION_NAME="${VERSION_NAME}")
 
 install(TARGETS ${MAIN_EXECUTABLE} RUNTIME DESTINATION)
