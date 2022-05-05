@@ -3,10 +3,16 @@
 #include "spdlog/spdlog.h"
 #include <cassert>
 #include <chrono>
+#include <cstddef>
 #include <memory>
 #include <thread>
 
 namespace sim {
+
+Simulator::Simulator() {
+    tickTimes.reserve(MAX_TICK_TIMES);
+}
+
 std::shared_ptr<Simulator>& Simulator::get_instance() {
     static std::shared_ptr<Simulator> instance = std::make_shared<Simulator>();
     return instance;
@@ -31,6 +37,7 @@ void Simulator::stop_worker() {
 
     SPDLOG_INFO("Stopping simulation thread...");
     state = SimulatorState::JOINING;
+    waitCondVar.notify_all();
     if (simThread->joinable()) {
         simThread->join();
     }
@@ -41,8 +48,80 @@ void Simulator::stop_worker() {
 
 void Simulator::sim_worker() {
     SPDLOG_INFO("Simulation thread started.");
+    std::unique_lock<std::mutex> lk(waitMutex);
     while (state == SimulatorState::RUNNING) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        waitCondVar.wait(lk);
+        if (!simulating) {
+            continue;
+        }
+        sim_tick();
+    }
+}
+
+void Simulator::sim_tick() {
+    std::chrono::high_resolution_clock::time_point tickStart = std::chrono::high_resolution_clock::now();
+
+    std::chrono::nanoseconds sinceLastTick = tickStart - lastTick;
+    lastTick = tickStart;
+
+    std::chrono::high_resolution_clock::time_point tickEnd = std::chrono::high_resolution_clock::now();
+    add_tick_time(tickEnd - tickStart);
+
+    // TPS counter:
+    tpsCounterReset += sinceLastTick;
+    tpsCount++;
+    if (tpsCounterReset >= std::chrono::seconds(1)) {
+        // Ensure we calculate the TPS for exactly on second:
+        double tpsCorrectionFactor = static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)).count()) / static_cast<double>(tpsCounterReset.count());
+        tps = static_cast<double>(tpsCount) * tpsCorrectionFactor;
+        tpsCount -= tps;
+        tpsCounterReset -= std::chrono::seconds(1);
+    }
+}
+
+void Simulator::continue_simulation() {
+    if (simulating) {
+        return;
+    }
+    simulating = true;
+    waitCondVar.notify_all();
+}
+
+void Simulator::pause_simulation() {
+    if (!simulating) {
+        return;
+    }
+    simulating = false;
+    waitCondVar.notify_all();
+}
+
+bool Simulator::is_simulating() const {
+    return simulating;
+}
+
+double Simulator::get_tps() const {
+    return tps;
+}
+std::chrono::nanoseconds Simulator::get_avg_tick_time() const {
+    if (tickTimes.empty()) {
+        return std::chrono::nanoseconds(0);
+    }
+
+    // Create a local copy:
+    std::vector<std::chrono::nanoseconds> tickTimes = this->tickTimes;
+    std::chrono::nanoseconds sum(0);
+    for (const std::chrono::nanoseconds& tickTime : tickTimes) {
+        sum += tickTime;
+    }
+    return std::chrono::nanoseconds(sum.count() / tickTimes.size());
+}
+
+void Simulator::add_tick_time(const std::chrono::nanoseconds& tickTime) {
+    if (tickTimes.size() >= MAX_TICK_TIMES) {
+        tickTimes[tickTimesIndex++] = tickTime;
+        if (tickTimesIndex >= MAX_TICK_TIMES) {
+            tickTimesIndex = 0;
+        }
     }
 }
 }  // namespace sim

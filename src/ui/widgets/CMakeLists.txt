@@ -4,4 +4,4 @@ add_library(ui_widgets OBJECT SimulationWidget.cpp
                               SimulationWidget.hpp)
 
 target_link_libraries(ui_widgets PUBLIC PkgConfig::GTKMM
-                                 PRIVATE logger)
+                                 PRIVATE logger sim)
