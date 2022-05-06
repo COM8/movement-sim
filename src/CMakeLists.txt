@@ -18,7 +18,7 @@ glib_add_resource_file(TARGET ui_resources
 
 add_executable(${MAIN_EXECUTABLE} main.cpp ${CMAKE_CURRENT_BINARY_DIR}/ui_resources.c)
 
-target_link_libraries(${MAIN_EXECUTABLE} PRIVATE logger ui sim)
+target_link_libraries(${MAIN_EXECUTABLE} PRIVATE logger ui sim PkgConfig::GTKMM)
 set_property(SOURCE main.cpp PROPERTY COMPILE_DEFINITIONS MOVEMENT_SIMULATOR_VERSION="${PROJECT_VERSION}" MOVEMENT_SIMULATOR_VERSION_NAME="${VERSION_NAME}")
 
 install(TARGETS ${MAIN_EXECUTABLE} RUNTIME DESTINATION)
