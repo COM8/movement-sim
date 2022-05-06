@@ -3,6 +3,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>
+#include <kompute/Manager.hpp>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -32,6 +33,8 @@ class Simulator {
     static constexpr size_t MAX_TICK_TIMES = 100;
     size_t tickTimesIndex{0};
     std::vector<std::chrono::nanoseconds> tickTimes{};
+
+    kp::Manager mgr;
 
  public:
     Simulator();

@@ -73,9 +73,12 @@ FetchContent_Declare(fmt GIT_REPOSITORY https://github.com/fmtlib/fmt.git
                          GIT_TAG b6f4ceaed0a0a24ccf575fab6c56dd50ccf6f1a9) # The hash for the release commit of 8.1.1 from: https://github.com/fmtlib/fmt/releases
 FetchContent_MakeAvailable(fmt)
 
+set(KOMPUTE_OPT_BUILD_AS_SHARED_LIB OFF) # Broken currently
+set(KOMPUTE_OPT_BUILD_SHADERS OFF) # Requires more and looks to be broken too
 FetchContent_Declare(kompute GIT_REPOSITORY https://github.com/KomputeProject/kompute.git
                              GIT_TAG de46d30678c2d8e2636b17b705ac0fe7d77f684b) # The commit hash for roughly after v0.8.1 from: https://github.com/KomputeProject/kompute/commit/de46d30678c2d8e2636b17b705ac0fe7d77f684b
 FetchContent_MakeAvailable(kompute)
+include_directories(${kompute_SOURCE_DIR}/src/include) # Fix somehow broken include dirs
 
 FetchContent_Declare(json GIT_REPOSITORY https://github.com/nlohmann/json.git
                           GIT_TAG v3.10.5)
