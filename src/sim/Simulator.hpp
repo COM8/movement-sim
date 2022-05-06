@@ -34,7 +34,13 @@ class Simulator {
     size_t tickTimesIndex{0};
     std::vector<std::chrono::nanoseconds> tickTimes{};
 
-    kp::Manager mgr;
+    kp::Manager mgr{};
+    std::vector<uint32_t> shader{};
+    std::shared_ptr<kp::Algorithm> algo{nullptr};
+    std::vector<std::shared_ptr<kp::Tensor>> params{};
+    std::shared_ptr<kp::TensorT<float>> tensorInA{nullptr};
+    std::shared_ptr<kp::TensorT<float>> tensorInB{nullptr};
+    std::shared_ptr<kp::TensorT<float>> tensorOut{nullptr};
 
  public:
     Simulator();

@@ -1,9 +1,12 @@
 #include "Simulator.hpp"
 #include "logger/Logger.hpp"
+#include "random_move.hpp"
 #include "spdlog/spdlog.h"
 #include <cassert>
 #include <chrono>
 #include <cstddef>
+#include <kompute/operations/OpTensorSyncDevice.hpp>
+#include <kompute/operations/OpTensorSyncLocal.hpp>
 #include <memory>
 #include <thread>
 
@@ -11,6 +14,16 @@ namespace sim {
 
 Simulator::Simulator() {
     tickTimes.reserve(MAX_TICK_TIMES);
+    // NOLINTNEXTLINE (cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    shader.assign(random_move, random_move + sizeof(random_move));
+
+    tensorInA = mgr.tensor({2.0, 4.0, 6.0});
+    tensorInB = mgr.tensor({0.0, 1.0, 2.0});
+    tensorOut = mgr.tensor({0.0, 0.0, 0.0});
+    params = {tensorInA,
+              tensorInB,
+              tensorOut};
+    mgr.algorithm(params, shader);
 }
 
 std::shared_ptr<Simulator>& Simulator::get_instance() {
@@ -62,7 +75,11 @@ void Simulator::sim_worker() {
 
 void Simulator::sim_tick() {
     std::chrono::high_resolution_clock::time_point tickStart = std::chrono::high_resolution_clock::now();
-    std::this_thread::sleep_for(std::chrono::microseconds(10));  // Dummy load
+    mgr.sequence()
+        ->record<kp::OpTensorSyncDevice>(params)
+        ->record<kp::OpAlgoDispatch>(algo)
+        ->record<kp::OpTensorSyncLocal>(params)
+        ->eval();
     std::chrono::nanoseconds sinceLastTick = tickStart - lastTick;
     lastTick = tickStart;
 

@@ -46,6 +46,7 @@ include(sanitizer)
 include(gcc_analyze)
 include(clear_variable)
 include(FetchContent)
+include(vulkan_shader_compiler)
 
 if(MOVEMENT_SIMULATOR_ENABLE_LINTING)
     message(STATUS "Enabling linting")
@@ -73,21 +74,25 @@ FetchContent_Declare(fmt GIT_REPOSITORY https://github.com/fmtlib/fmt.git
                          GIT_TAG b6f4ceaed0a0a24ccf575fab6c56dd50ccf6f1a9) # The hash for the release commit of 8.1.1 from: https://github.com/fmtlib/fmt/releases
 FetchContent_MakeAvailable(fmt)
 
+set(SPDLOG_INSTALL OFF)
+FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git
+                            GIT_TAG v1.9.2)
+FetchContent_MakeAvailable(spdlog)
+
 set(KOMPUTE_OPT_BUILD_AS_SHARED_LIB OFF) # Broken currently
 set(KOMPUTE_OPT_BUILD_SHADERS OFF) # Requires more and looks to be broken too
+set(KOMPUTE_OPT_ENABLE_SPDLOG ON) # Required since logging is enabled anyway since we are using spdlog our selfes
+set(KOMPUTE_OPT_DISABLE_VK_DEBUG_LAYERS ON) # If disabled, crashes at startup
 FetchContent_Declare(kompute GIT_REPOSITORY https://github.com/KomputeProject/kompute.git
-                             GIT_TAG de46d30678c2d8e2636b17b705ac0fe7d77f684b) # The commit hash for roughly after v0.8.1 from: https://github.com/KomputeProject/kompute/commit/de46d30678c2d8e2636b17b705ac0fe7d77f684b
+                             GIT_TAG de46d30678c2d8e2636b17b705ac0fe7d77f684b
+                             GIT_SHALLOW ON
+                             GIT_SUBMODULES_RECURSE OFF) # The commit hash for roughly after v0.8.1 from: https://github.com/KomputeProject/kompute/commit/de46d30678c2d8e2636b17b705ac0fe7d77f684b
 FetchContent_MakeAvailable(kompute)
 include_directories(${kompute_SOURCE_DIR}/src/include) # Fix somehow broken include dirs
 
 FetchContent_Declare(json GIT_REPOSITORY https://github.com/nlohmann/json.git
                           GIT_TAG v3.10.5)
 FetchContent_MakeAvailable(json)
-
-set(SPDLOG_INSTALL ON)
-FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git
-                            GIT_TAG v1.9.2)
-FetchContent_MakeAvailable(spdlog)
 
 restore_variable(DESTINATION CMAKE_CXX_CLANG_TIDY BACKUP CMAKE_CXX_CLANG_TIDY_BKP)
 restore_variable(DESTINATION CMAKE_CXX_FLAGS BACKUP CMAKE_CXX_FLAGS_BKP)
