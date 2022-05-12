@@ -43,17 +43,17 @@ void SimulationWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context>& ctx,
         if (e.isValid) {
             double x = (e.pos.x / sim::WORLD_SIZE_X) * static_cast<double>(width);
             double y = (e.pos.y / sim::WORLD_SIZE_Y) * static_cast<double>(height);
-            ctx->rectangle(x, y, 10, 10);
+            ctx->rectangle(x - 0.5, y - 0.5, 1, 1);
             ctx->set_source_rgb(1.0, 0, 0);
             ctx->fill();
         }
     }
 
+    ctx->restore();
+
     // Stats:
     std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {}ns", simulator->get_tps(), simulator->get_avg_tick_time().count());
     draw_text(stats, ctx, 5, 20);
-
-    ctx->restore();
 }
 
 bool SimulationWidget::on_tick(const Glib::RefPtr<Gdk::FrameClock>& /*frameClock*/) {

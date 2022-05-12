@@ -29,8 +29,8 @@ Simulator::Simulator() {
 void Simulator::add_entities() {
     for (size_t i = 1; i <= MAX_ENTITIES; i++) {
         entities.push_back(Entity{
-            {static_cast<float>(i), static_cast<float>(i)},
-            {static_cast<float>(i), static_cast<float>(i)},
+            {static_cast<float>(i * 5), static_cast<float>(i * 5)},
+            {static_cast<float>(i * 5), static_cast<float>(i * 5)},
             true});
     }
 }
@@ -93,6 +93,7 @@ void Simulator::sim_tick() {
         ->record<kp::OpAlgoDispatch>(algo)
         ->record<kp::OpTensorSyncLocal>(params)
         ->eval();
+    entities = tensorEntities->vector<Entity>();
     std::chrono::nanoseconds sinceLastTick = tickStart - lastTick;
     lastTick = tickStart;
 

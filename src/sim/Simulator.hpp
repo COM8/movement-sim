@@ -5,6 +5,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>
+#include <cstdint>
 #include <kompute/Manager.hpp>
 #include <memory>
 #include <mutex>
@@ -19,7 +20,7 @@ enum class SimulatorState {
     JOINING
 };
 
-constexpr size_t MAX_ENTITIES = 1000000;
+constexpr size_t MAX_ENTITIES = 10000;
 constexpr float WORLD_SIZE_X = 8192;
 constexpr float WORLD_SIZE_Y = 8192;
 
