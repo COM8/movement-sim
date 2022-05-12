@@ -1,0 +1,26 @@
+#version 450
+#extension GL_EXT_debug_printf : enable
+
+layout (local_size_x = 1) in;
+
+struct EntityDescriptor {
+    vec2 pos;
+    vec2 direction;
+    bool isValid;
+};
+
+layout(push_constant) uniform PushConstants {
+	float worldSizeX;
+	float worldSizeY;
+} pushConsts;
+
+layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    debugPrintfEXT("X: %f, Y: %f", entities[index].pos.x, entities[index].pos.y);
+    if(entities[index].isValid) {
+        entities[index].pos = entities[index].pos.xy + entities[index].direction.xy;
+        entities[index].pos = mod(entities[index].pos.xy, vec2(pushConsts.worldSizeX, pushConsts.worldSizeY));
+    }
+}

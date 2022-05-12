@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sim/Entity.hpp"
+#include <array>
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>
@@ -16,6 +18,10 @@ enum class SimulatorState {
     RUNNING,
     JOINING
 };
+
+constexpr size_t MAX_ENTITIES = 1000000;
+constexpr float WORLD_SIZE_X = 8192;
+constexpr float WORLD_SIZE_Y = 8192;
 
 class Simulator {
  private:
@@ -38,9 +44,9 @@ class Simulator {
     std::vector<uint32_t> shader{};
     std::shared_ptr<kp::Algorithm> algo{nullptr};
     std::vector<std::shared_ptr<kp::Tensor>> params{};
-    std::shared_ptr<kp::TensorT<float>> tensorInA{nullptr};
-    std::shared_ptr<kp::TensorT<float>> tensorInB{nullptr};
-    std::shared_ptr<kp::TensorT<float>> tensorOut{nullptr};
+
+    std::vector<Entity> entities;
+    std::shared_ptr<kp::Tensor> tensorEntities{nullptr};
 
  public:
     Simulator();
@@ -61,10 +67,12 @@ class Simulator {
     [[nodiscard]] bool is_simulating() const;
     [[nodiscard]] double get_tps() const;
     [[nodiscard]] std::chrono::nanoseconds get_avg_tick_time() const;
+    [[nodiscard]] const std::vector<Entity>& get_entities() const;
 
  private:
     void sim_worker();
     void sim_tick();
     void add_tick_time(const std::chrono::nanoseconds& tickTime);
+    void add_entities();
 };
 }  // namespace sim

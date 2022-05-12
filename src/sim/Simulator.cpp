@@ -1,6 +1,8 @@
 #include "Simulator.hpp"
+#include "kompute/Tensor.hpp"
 #include "logger/Logger.hpp"
 #include "shader/utils/Utils.hpp"
+#include "sim/Entity.hpp"
 #include "spdlog/spdlog.h"
 #include <cassert>
 #include <chrono>
@@ -9,20 +11,28 @@
 #include <kompute/operations/OpTensorSyncLocal.hpp>
 #include <memory>
 #include <thread>
+#include <vector>
 
 namespace sim {
 
 Simulator::Simulator() {
     tickTimes.reserve(MAX_TICK_TIMES);
-    shader = shaders::utils::load_shader("sim/shader/random_move.spv");
+    shader = shaders::utils::load_shader("sim/shader/random_move_struct.spv");
 
-    tensorInA = mgr.tensor({2.0, 4.0, 6.0});
-    tensorInB = mgr.tensor({0.0, 1.0, 2.0});
-    tensorOut = mgr.tensor({0.0, 0.0, 0.0});
-    params = {tensorInA,
-              tensorInB,
-              tensorOut};
-    algo = mgr.algorithm(params, shader);
+    add_entities();
+    tensorEntities = mgr.tensor(entities.data(), entities.size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eInt);
+
+    params = {tensorEntities};
+    algo = mgr.algorithm(params, shader, {}, {}, std::vector<float>{WORLD_SIZE_X, WORLD_SIZE_Y});
+}
+
+void Simulator::add_entities() {
+    for (size_t i = 1; i <= MAX_ENTITIES; i++) {
+        entities.push_back(Entity{
+            {static_cast<float>(i), static_cast<float>(i)},
+            {static_cast<float>(i), static_cast<float>(i)},
+            true});
+    }
 }
 
 std::shared_ptr<Simulator>& Simulator::get_instance() {
@@ -32,6 +42,10 @@ std::shared_ptr<Simulator>& Simulator::get_instance() {
 
 SimulatorState Simulator::get_state() const {
     return state;
+}
+
+const std::vector<Entity>& Simulator::get_entities() const {
+    return entities;
 }
 
 void Simulator::start_worker() {

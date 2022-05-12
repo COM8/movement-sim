@@ -1,4 +1,5 @@
 #include "SimulationWidget.hpp"
+#include "sim/Entity.hpp"
 #include "sim/Simulator.hpp"
 #include "spdlog/fmt/bundled/core.h"
 #include <cassert>
@@ -32,10 +33,21 @@ void SimulationWidget::draw_text(const std::string& text, const Cairo::RefPtr<Ca
 }
 
 //-----------------------------Events:-----------------------------
-void SimulationWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context>& ctx, int /*width*/, int /*height*/) {
+void SimulationWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context>& ctx, int width, int height) {
     assert(simulator);
 
     ctx->save();
+
+    // Entities:
+    for (const sim::Entity& e : simulator->get_entities()) {
+        if (e.isValid) {
+            double x = (e.pos.x / sim::WORLD_SIZE_X) * static_cast<double>(width);
+            double y = (e.pos.y / sim::WORLD_SIZE_Y) * static_cast<double>(height);
+            ctx->rectangle(x, y, 10, 10);
+            ctx->set_source_rgb(1.0, 0, 0);
+            ctx->fill();
+        }
+    }
 
     // Stats:
     std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {}ns", simulator->get_tps(), simulator->get_avg_tick_time().count());
