@@ -32,7 +32,8 @@ Checks: '*,
 -google-readability-todo,
 -altera-unroll-loops,
 -altera-id-dependent-backward-branch,
--bugprone-easily-swappable-parameters
+-bugprone-easily-swappable-parameters,
+-readability-identifier-length
 '
 WarningsAsErrors: '*'
 HeaderFilterRegex: 'src/*.hpp'
