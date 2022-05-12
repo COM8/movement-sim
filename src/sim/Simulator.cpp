@@ -1,6 +1,6 @@
 #include "Simulator.hpp"
 #include "logger/Logger.hpp"
-#include "random_move.hpp"
+#include "shader/utils/Utils.hpp"
 #include "spdlog/spdlog.h"
 #include <cassert>
 #include <chrono>
@@ -14,8 +14,7 @@ namespace sim {
 
 Simulator::Simulator() {
     tickTimes.reserve(MAX_TICK_TIMES);
-    // NOLINTNEXTLINE (cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    shader.assign(random_move, random_move + sizeof(random_move));
+    shader = shaders::utils::load_shader("sim/shader/random_move.spv");
 
     tensorInA = mgr.tensor({2.0, 4.0, 6.0});
     tensorInB = mgr.tensor({0.0, 1.0, 2.0});
@@ -23,7 +22,7 @@ Simulator::Simulator() {
     params = {tensorInA,
               tensorInB,
               tensorOut};
-    mgr.algorithm(params, shader);
+    algo = mgr.algorithm(params, shader);
 }
 
 std::shared_ptr<Simulator>& Simulator::get_instance() {

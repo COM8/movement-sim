@@ -79,14 +79,12 @@ FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git
                             GIT_TAG v1.9.2)
 FetchContent_MakeAvailable(spdlog)
 
-set(KOMPUTE_OPT_BUILD_AS_SHARED_LIB OFF) # Broken currently
-set(KOMPUTE_OPT_BUILD_SHADERS OFF) # Requires more and looks to be broken too
-set(KOMPUTE_OPT_ENABLE_SPDLOG ON) # Required since logging is enabled anyway since we are using spdlog our selfes
-set(KOMPUTE_OPT_DISABLE_VK_DEBUG_LAYERS ON) # If disabled, crashes at startup
-FetchContent_Declare(kompute GIT_REPOSITORY https://github.com/KomputeProject/kompute.git
-                             GIT_TAG de46d30678c2d8e2636b17b705ac0fe7d77f684b
-                             GIT_SHALLOW ON
-                             GIT_SUBMODULES_RECURSE OFF) # The commit hash for roughly after v0.8.1 from: https://github.com/KomputeProject/kompute/commit/de46d30678c2d8e2636b17b705ac0fe7d77f684b
+set(KOMPUTE_OPT_DISABLE_VK_DEBUG_LAYERS ON) # Version clash since they are not properly supported on my GPU.
+set(KOMPUTE_OPT_USE_BUILD_IN_VULKAN_HEADER OFF)
+set(KOMPUTE_VK_API_MAJOR_VERSION 1)
+set(KOMPUTE_VK_API_MINOR_VERSION 2)
+FetchContent_Declare(kompute GIT_REPOSITORY https://github.com/COM8/kompute.git
+                             GIT_TAG bd5933414dc13445734037bd1a8a2b8e52e659fc)
 FetchContent_MakeAvailable(kompute)
 include_directories(${kompute_SOURCE_DIR}/src/include) # Fix somehow broken include dirs
 
