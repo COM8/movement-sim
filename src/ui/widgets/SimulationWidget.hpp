@@ -29,6 +29,7 @@ class SimulationWidget : public Gtk::GLArea {
     void prep_widget();
     void prepare_shader();
     void prepare_buffers();
+    void bind_attributes();
 
     //-----------------------------Events:-----------------------------
     bool on_render_handler(const Glib::RefPtr<Gdk::GLContext>& ctx);

@@ -71,6 +71,10 @@ static const GLuint elements[] = {
     2, 3, 0};
 
 void SimulationWidget::prepare_buffers() {
+    // Store Vertex array object settings:
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
     // Vertex buffer:
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -80,10 +84,6 @@ void SimulationWidget::prepare_buffers() {
     glGenBuffers(1, &ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
-
-    // Store Vertex array object settings:
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
 }
 
 GLuint SimulationWidget::compile_shader(const std::string& resourcePath, GLenum type) {
@@ -113,7 +113,20 @@ GLuint SimulationWidget::compile_shader(const std::string& resourcePath, GLenum 
         glDeleteShader(shader);
         return -1;
     }
+    SPDLOG_DEBUG("Compiling shader '{}' was successful.", resourcePath);
     return shader;
+}
+
+void SimulationWidget::bind_attributes() {
+    glUseProgram(prog);
+    GLint posAttrib = glGetAttribLocation(prog, "position");
+    glEnableVertexAttribArray(posAttrib);
+    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), nullptr);
+
+    GLint colAttrib = glGetAttribLocation(prog, "color");
+    glEnableVertexAttribArray(colAttrib);
+    // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
+    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), reinterpret_cast<void*>(2 * sizeof(GLfloat)));
 }
 
 //-----------------------------Events:-----------------------------
@@ -127,22 +140,7 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
         glClearColor(0, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // Draw stuff:
-        glUseProgram(prog);
-        GLint posAttrib = glGetAttribLocation(prog, "position");
-        glEnableVertexAttribArray(posAttrib);
-        glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-
-        GLint colAttrib = glGetAttribLocation(prog, "color");
-        glEnableVertexAttribArray(colAttrib);
-        // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
-        glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), reinterpret_cast<void*>(2 * sizeof(float)));
-
-        // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, nullptr);
-        // glDrawArrays(GL_TRIANGLES, 0, 3);
-
-        glUseProgram(0);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
         glFlush();
         return true;
@@ -167,6 +165,7 @@ void SimulationWidget::on_realized() {
         throw_if_error();
         prepare_buffers();
         prepare_shader();
+        bind_attributes();
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred making the context current during realize: {} - {} - {}", gle.domain(), gle.code(), gle.what());
     }
