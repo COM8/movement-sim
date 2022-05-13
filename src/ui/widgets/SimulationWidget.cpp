@@ -1,79 +1,140 @@
 #include "SimulationWidget.hpp"
+#include "logger/Logger.hpp"
 #include "sim/Entity.hpp"
 #include "sim/Simulator.hpp"
 #include "spdlog/fmt/bundled/core.h"
+#include "spdlog/spdlog.h"
 #include <cassert>
 #include <chrono>
 #include <string>
 #include <bits/chrono.h>
+#include <epoxy/gl.h>
+#include <epoxy/gl_generated.h>
 #include <fmt/core.h>
+#include <glibconfig.h>
 
 namespace ui::widgets {
 SimulationWidget::SimulationWidget() : simulator(sim::Simulator::get_instance()) {
     prep_widget();
-    set_draw_func(sigc::mem_fun(*this, &SimulationWidget::on_draw_handler));
+    signal_render().connect(sigc::mem_fun(*this, &SimulationWidget::on_render_handler), true);
+    signal_realize().connect(sigc::mem_fun(*this, &SimulationWidget::on_realized));
+    signal_unrealize().connect(sigc::mem_fun(*this, &SimulationWidget::on_unrealized));
     add_tick_callback(sigc::mem_fun(*this, &SimulationWidget::on_tick));
 }
 
-void SimulationWidget::prep_widget() {}
+void SimulationWidget::prep_widget() {
+    set_auto_render();
+}
 
-void SimulationWidget::draw_text(const std::string& text, const Cairo::RefPtr<Cairo::Context>& ctx, double x, double y) {
-    ctx->save();
-    Pango::FontDescription font;
-    font.set_weight(Pango::Weight::BOLD);
-    Glib::RefPtr<Pango::Layout> layout = create_pango_layout(text);
-    layout->set_font_description(font);
-    ctx->move_to(x, y);
-    layout->add_to_cairo_context(ctx);
-    Gdk::RGBA foreground = get_style_context()->get_color();
-    ctx->set_source_rgba(foreground.get_red(), foreground.get_green(), foreground.get_blue(), foreground.get_alpha());
-    ctx->fill_preserve();
-    ctx->set_source_rgba(1 - foreground.get_red(), 1 - foreground.get_green(), 1 - foreground.get_blue(), foreground.get_alpha());
-    ctx->set_line_width(0.3);
-    ctx->stroke();
-    ctx->restore();
+void SimulationWidget::prepare_shader() {
+    // Load shader:
+    std::string path = "/ui/entity_draw.frag";
+    const Glib::RefPtr<const Glib::Bytes> shader_bytes = Gio::Resource::lookup_data_global(path);
+    assert(shader_bytes);
+    gsize shader_size = shader_bytes->get_size();
+    const char* shader_data = static_cast<const char*>(shader_bytes->get_data(shader_size));
+
+    // Create shader:
+    int shader_type = GL_FRAGMENT_SHADER;
+    int shader = glCreateShader(shader_type);
+
+    glShaderSource(shader, 1, &shader_data, nullptr);
+    glCompileShader(shader_type);
+
+    int status = GL_FALSE;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+    if (status == GL_FALSE) {
+        int log_len = 0;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_len);
+
+        std::string log_msg;
+        log_msg.resize(log_len + 1);
+        glGetShaderInfoLog(shader, log_len, nullptr, static_cast<GLchar*>(log_msg.data()));
+
+        SPDLOG_ERROR("Compiling fragment shader '{}' failed with: {}", path, log_msg);
+        glDeleteShader(shader);
+    }
+
+    // Prepare program:
+    m_Program = glCreateProgram();
+    glAttachShader(m_Program, shader);
+    glLinkProgram(m_Program);
+
+    status = GL_FALSE;
+    glGetProgramiv(m_Program, GL_LINK_STATUS, &status);
+    if (status == GL_FALSE) {
+        int log_len = 0;
+        glGetProgramiv(m_Program, GL_INFO_LOG_LENGTH, &log_len);
+
+        std::string log_msg;
+        log_msg.resize(log_len + 1);
+        glGetProgramInfoLog(shader, log_len, nullptr, static_cast<GLchar*>(log_msg.data()));
+        SPDLOG_ERROR("Linking failed: {}", log_msg);
+        glDeleteProgram(m_Program);
+        m_Program = 0;
+    } else {
+        /* Get the location of the "mvp" uniform */
+        m_Mvp = glGetUniformLocation(m_Program, "mvp");
+
+        glDetachShader(m_Program, shader);
+    }
+    glDeleteShader(shader);
+}
+
+static const GLfloat vertex_data[] = {
+    0.f,
+    0.5f,
+    0.f,
+    1.f,
+    0.5f,
+    -0.366f,
+    0.f,
+    1.f,
+    -0.5f,
+    -0.366f,
+    0.f,
+    1.f,
+};
+
+void SimulationWidget::prepare_buffers() {
+    glGenVertexArrays(1, &m_Vao);
+    glBindVertexArray(m_Vao);
+
+    glGenBuffers(1, &m_Buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 //-----------------------------Events:-----------------------------
-void SimulationWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context>& ctx, int width, int height) {
+bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*ctx*/) {
     assert(simulator);
 
-    ctx->save();
-    size_t valid_count = 0;
+    try {
+        throw_if_error();
+        glClearColor(0.5, 0.5, 0.5, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
 
-    // Entities:
-    for (const sim::Entity& e : simulator->get_entities()) {
-        double x = (e.pos_cur.x / sim::WORLD_SIZE_X) * static_cast<double>(width);
-        double y = (e.pos_cur.y / sim::WORLD_SIZE_Y) * static_cast<double>(height);
-        ctx->rectangle(x - 2.5, y - 2.5, 5, 5);
-        ctx->set_source_rgb(e.color.r, e.color.g, e.color.b);
-        ctx->fill();
-        if (e.is_valid) {
-            valid_count++;
-        }
+        //------------------------------
+        glUseProgram(m_Program);
+
+        glBindBuffer(GL_ARRAY_BUFFER, m_Buffer);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        glDisableVertexAttribArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glUseProgram(0);
+        //------------------------------
+
+        glFlush();
+        return true;
+    } catch (const Gdk::GLError& gle) {
+        SPDLOG_ERROR("An error occurred in the render callback of the GLArea: {} - {} - {}", gle.domain(), gle.code(), gle.what());
     }
-
-    ctx->restore();
-
-    // Stats:
-    double tick_time = static_cast<double>(simulator->get_avg_tick_time().count());
-    std::string unit = "ns";
-    if (tick_time >= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::microseconds(1)).count()) {
-        if (tick_time >= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::milliseconds(1)).count()) {
-            if (tick_time >= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)).count()) {
-                tick_time /= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)).count();
-                unit = "s";
-            } else {
-                tick_time /= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::milliseconds(1)).count();
-                unit = "ms";
-            }
-        } else {
-            tick_time /= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::microseconds(1)).count();
-            unit = "us";
-        }
-    }
-    std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {:.2f}{}\nEntities: {}, valid: {}", simulator->get_tps(), tick_time, unit, simulator->get_entities().size(), valid_count);
-    draw_text(stats, ctx, 5, 20);
+    return false;
 }
 
 bool SimulationWidget::on_tick(const Glib::RefPtr<Gdk::FrameClock>& /*frameClock*/) {
@@ -83,5 +144,19 @@ bool SimulationWidget::on_tick(const Glib::RefPtr<Gdk::FrameClock>& /*frameClock
         queue_draw();
     }
     return true;
+}
+
+void SimulationWidget::on_realized() {
+    make_current();
+    try {
+        throw_if_error();
+        prepare_buffers();
+        prepare_shader();
+    } catch (const Gdk::GLError& gle) {
+        SPDLOG_ERROR("An error occurred making the context current during realize: {} - {} - {}", gle.domain(), gle.code(), gle.what());
+    }
+}
+
+void SimulationWidget::on_unrealized() {
 }
 }  // namespace ui::widgets

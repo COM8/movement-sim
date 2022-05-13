@@ -27,7 +27,11 @@ void MainWindow::prep_window() {
 
     // Simulator:
     simulationWidget.set_expand();
-    mainBox.append(simulationWidget);
+    simulationOverlay.set_child(simulationWidget);
+    simulationOverlay.add_overlay(simulationOverlayWidget);
+    simulationOverlay.set_expand();
+    mainBox.append(simulationOverlay);
+
     set_child(mainBox);
 }
 

@@ -2,5 +2,6 @@
 <gresources>
   <gresource prefix="/ui/">
     <file>theme.css</file>
+    <file>entity_draw.frag</file>
   </gresource>
 </gresources>
