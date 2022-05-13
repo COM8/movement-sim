@@ -20,16 +20,18 @@ Simulator::Simulator() {
     shader = shaders::utils::load_shader("sim/shader/random_move_struct.spv");
 
     add_entities();
-    tensorEntities = mgr.tensor(entities.data(), entities.size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eDouble);
+    tensorEntities = mgr.tensor(entities->data(), entities->size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eDouble);
 
     params = {tensorEntities};
     algo = mgr.algorithm(params, shader, {}, {}, std::vector<float>{WORLD_SIZE_X, WORLD_SIZE_Y});
 }
 
 void Simulator::add_entities() {
+    entities = std::make_shared<std::vector<Entity>>();
+    entities->reserve(MAX_ENTITIES);
     for (size_t i = 1; i <= MAX_ENTITIES; i++) {
         Vec2 pos = Vec2::random_vec(0, WORLD_SIZE_X, 0, WORLD_SIZE_Y);
-        entities.push_back(Entity{
+        entities->push_back(Entity{
             Rgb(),
             pos,
             pos,
@@ -48,8 +50,10 @@ SimulatorState Simulator::get_state() const {
     return state;
 }
 
-const std::vector<Entity>& Simulator::get_entities() const {
-    return entities;
+std::shared_ptr<std::vector<Entity>> Simulator::get_entities() {
+    std::shared_ptr<std::vector<Entity>> result = std::move(entities);
+    entities = nullptr;
+    return result;
 }
 
 void Simulator::start_worker() {
@@ -78,6 +82,14 @@ void Simulator::stop_worker() {
 
 void Simulator::sim_worker() {
     SPDLOG_INFO("Simulation thread started.");
+
+    // Ensure the data is on the GPU:
+    std::shared_ptr<kp::Sequence> sendSeq = mgr.sequence()->record<kp::OpTensorSyncDevice>(params);
+    sendSeq->evalAsync();
+    std::shared_ptr<kp::Sequence> calcSeq = mgr.sequence()->record<kp::OpAlgoDispatch>(algo);
+    std::shared_ptr<kp::Sequence> retriveSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>(params);
+    sendSeq->evalAwait();
+
     std::unique_lock<std::mutex> lk(waitMutex);
     while (state == SimulatorState::RUNNING) {
         if (!simulating) {
@@ -86,18 +98,19 @@ void Simulator::sim_worker() {
         if (!simulating) {
             continue;
         }
-        sim_tick();
+        sim_tick(sendSeq, calcSeq, retriveSeq);
     }
 }
 
-void Simulator::sim_tick() {
+void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retriveSeq) {
     std::chrono::high_resolution_clock::time_point tickStart = std::chrono::high_resolution_clock::now();
-    mgr.sequence()
-        ->record<kp::OpTensorSyncDevice>(params)
-        ->record<kp::OpAlgoDispatch>(algo)
-        ->record<kp::OpTensorSyncLocal>(params)
-        ->eval();
-    entities = tensorEntities->vector<Entity>();
+
+    calcSeq->eval();
+    if (!entities) {
+        retriveSeq->eval();
+        entities = std::make_shared<std::vector<Entity>>(tensorEntities->vector<Entity>());
+    }
+
     std::chrono::nanoseconds sinceLastTick = tickStart - lastTick;
     lastTick = tickStart;
 

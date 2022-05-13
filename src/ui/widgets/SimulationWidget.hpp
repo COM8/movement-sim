@@ -1,13 +1,16 @@
 #pragma once
 
+#include "sim/Entity.hpp"
 #include "sim/Simulator.hpp"
 #include <memory>
+#include <vector>
 #include <gtkmm.h>
 
 namespace ui::widgets {
 class SimulationWidget : public Gtk::DrawingArea {
  private:
     std::shared_ptr<sim::Simulator> simulator{nullptr};
+    std::shared_ptr<std::vector<sim::Entity>> entities;
 
  public:
     SimulationWidget();

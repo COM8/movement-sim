@@ -46,7 +46,7 @@ class Simulator {
     std::shared_ptr<kp::Algorithm> algo{nullptr};
     std::vector<std::shared_ptr<kp::Tensor>> params{};
 
-    std::vector<Entity> entities;
+    std::shared_ptr<std::vector<Entity>> entities;
     std::shared_ptr<kp::Tensor> tensorEntities{nullptr};
 
  public:
@@ -68,11 +68,11 @@ class Simulator {
     [[nodiscard]] bool is_simulating() const;
     [[nodiscard]] double get_tps() const;
     [[nodiscard]] std::chrono::nanoseconds get_avg_tick_time() const;
-    [[nodiscard]] const std::vector<Entity>& get_entities() const;
+    std::shared_ptr<std::vector<Entity>> get_entities();
 
  private:
     void sim_worker();
-    void sim_tick();
+    void sim_tick(std::shared_ptr<kp::Sequence>& sendSeq, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retriveSeq);
     void add_tick_time(const std::chrono::nanoseconds& tickTime);
     void add_entities();
 };

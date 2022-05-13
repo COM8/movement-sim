@@ -39,17 +39,24 @@ void SimulationWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context>& ctx,
     assert(simulator);
 
     ctx->save();
-    size_t valid_count = 0;
 
     // Entities:
-    for (const sim::Entity& e : simulator->get_entities()) {
-        double x = (e.pos_cur.x / sim::WORLD_SIZE_X) * static_cast<double>(width);
-        double y = (e.pos_cur.y / sim::WORLD_SIZE_Y) * static_cast<double>(height);
-        ctx->rectangle(x - 2.5, y - 2.5, 5, 5);
-        ctx->set_source_rgb(e.color.r, e.color.g, e.color.b);
-        ctx->fill();
-        if (e.is_valid) {
-            valid_count++;
+    size_t valid_count = 0;
+    std::shared_ptr<std::vector<sim::Entity>> entities = simulator->get_entities();
+    if (entities) {
+        this->entities = entities;
+    }
+    if (this->entities) {
+        for (const sim::Entity& e : *(this->entities)) {
+            double x = (e.pos_cur.x / sim::WORLD_SIZE_X) * static_cast<double>(width);
+            double y = (e.pos_cur.y / sim::WORLD_SIZE_Y) * static_cast<double>(height);
+            double size = 2;
+            ctx->rectangle(x - (size / 2), y - (size / 2), size, size);
+            ctx->set_source_rgb(e.color.r, e.color.g, e.color.b);
+            ctx->fill();
+            if (e.is_valid) {
+                valid_count++;
+            }
         }
     }
 
@@ -72,7 +79,7 @@ void SimulationWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context>& ctx,
             unit = "us";
         }
     }
-    std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {:.2f}{}\nEntities: {}, valid: {}", simulator->get_tps(), tick_time, unit, simulator->get_entities().size(), valid_count);
+    std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {:.2f}{}\nEntities: {}, valid: {}", simulator->get_tps(), tick_time, unit, sim::MAX_ENTITIES, valid_count);
     draw_text(stats, ctx, 5, 20);
 }
 
