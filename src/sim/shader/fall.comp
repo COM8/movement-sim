@@ -1,0 +1,112 @@
+#version 450
+
+layout (local_size_x = 1) in;
+
+struct EntityDescriptor {
+    vec3 color;
+    float padding1;
+    vec2 pos_cur;
+    vec2 pos_prev;
+    vec2 direction;
+    int rand_seed;
+    bool is_valid;
+    vec4 padding2; // Make sure we are alligned to 64 bytes like the original entity
+};
+
+layout(push_constant) uniform PushConstants {
+	float world_size_x;
+	float world_size_y;
+} pushConsts;
+
+layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
+
+// ------------------------------------------------------------------------------------
+// XOR-Shift
+// Source: https://www.shadertoy.com/view/tsf3Dn
+// ------------------------------------------------------------------------------------
+int MIN = -2147483648;
+int MAX = 2147483647;
+
+int xorshift(in int value) {
+    // Xorshift*32
+    // Based on George Marsaglia's work: http://www.jstatsoft.org/v08/i14/paper
+    value ^= value << 13;
+    value ^= value >> 17;
+    value ^= value << 5;
+    return value;
+}
+
+int nextInt(inout int seed) {
+    seed = xorshift(seed);
+    return seed;
+}
+
+float nextFloat(inout int seed) {
+    seed = xorshift(seed);
+    // FIXME: This should have been a seed mapped from MIN..MAX to 0..1 instead
+    return abs(fract(float(seed) / 3141.592653));
+}
+
+float nextFloat(inout int seed, in float max) {
+    return nextFloat(seed) * max;
+}
+
+precision lowp float;
+
+// ------------------------------------------------------------------------------------
+
+bool check_collision(uint index) {
+    bool collision = false;
+    if(entities[index].pos_cur.x > pushConsts.world_size_x) {
+        entities[index].pos_cur.x = pushConsts.world_size_x;
+        entities[index].direction = reflect(entities[index].direction, vec2(1, 0));
+        collision = true;
+    }
+    else if(entities[index].pos_cur.x < 0) {
+        entities[index].pos_cur.x = 0;
+        entities[index].direction = reflect(entities[index].direction, vec2(1, 0));
+        collision = true;
+    }
+
+    if(entities[index].pos_cur.y > pushConsts.world_size_y) {
+        entities[index].pos_cur.y = pushConsts.world_size_y;
+        entities[index].direction = reflect(entities[index].direction, vec2(0, 1));
+        collision = true;
+    }
+    else if(entities[index].pos_cur.y < 0) {
+        entities[index].pos_cur.y = 0;
+        entities[index].direction = reflect(entities[index].direction, vec2(0, 1));
+        collision = true;
+    }
+    return collision;
+}
+
+void move(uint index) {
+    entities[index].pos_prev = entities[index].pos_cur;
+    entities[index].pos_cur += entities[index].direction;
+
+    entities[index].direction -= vec2(0, 0.01);
+    // entities[index].direction *= vec2(0.99, 0.99);
+}
+
+void set_random_color(uint index) {
+    int seed = entities[index].rand_seed;
+    entities[index].color.r = entities[index].pos_cur.x / pushConsts.world_size_x;
+    seed = nextInt(seed);
+    entities[index].color.g = entities[index].pos_cur.y / pushConsts.world_size_y;
+    seed = nextInt(seed);
+    entities[index].color.b = 0.0;
+    entities[index].rand_seed = nextInt(seed);
+}
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    
+    move(index);
+    bool collision = check_collision(index);
+    if(collision) {
+        entities[index].direction *= vec2(0.99);
+        set_random_color(index);
+    }
+    entities[index].is_valid = true;
+}

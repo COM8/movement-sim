@@ -49,7 +49,7 @@ void SimulationWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context>& ctx,
     if (this->entities) {
         for (const sim::Entity& e : *(this->entities)) {
             double x = (e.pos_cur.x / sim::WORLD_SIZE_X) * static_cast<double>(width);
-            double y = (e.pos_cur.y / sim::WORLD_SIZE_Y) * static_cast<double>(height);
+            double y = height - ((e.pos_cur.y / sim::WORLD_SIZE_Y) * static_cast<double>(height));
             double size = 2;
             ctx->rectangle(x - (size / 2), y - (size / 2), size, size);
             ctx->set_source_rgb(e.color.r, e.color.g, e.color.b);

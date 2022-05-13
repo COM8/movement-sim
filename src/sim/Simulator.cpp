@@ -17,7 +17,7 @@ namespace sim {
 
 Simulator::Simulator() {
     tickTimes.reserve(MAX_TICK_TIMES);
-    shader = shaders::utils::load_shader("sim/shader/random_move_struct.spv");
+    shader = shaders::utils::load_shader("sim/shader/fall.spv");
 
     add_entities();
     tensorEntities = mgr.tensor(entities->data(), entities->size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eDouble);
