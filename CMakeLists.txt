@@ -47,6 +47,7 @@ include(gcc_analyze)
 include(clear_variable)
 include(FetchContent)
 include(vulkan_shader_compiler)
+include(copy_shader_file)
 
 if(MOVEMENT_SIMULATOR_ENABLE_LINTING)
     message(STATUS "Enabling linting")
@@ -64,6 +65,7 @@ find_package(PkgConfig REQUIRED)
 # Additional search path since gtkmm-4.0 will usually be installed in /usr
 set(ENV{PKG_CONFIG_PATH} "/usr/lib/pkgconfig")
 pkg_check_modules(GTKMM gtkmm-4.0>=4.4.0 REQUIRED IMPORTED_TARGET)
+pkg_check_modules(EPOXY epoxy REQUIRED IMPORTED_TARGET)
 
 # Disable linting for fetch content projects
 clear_variable(DESTINATION CMAKE_CXX_CLANG_TIDY BACKUP CMAKE_CXX_CLANG_TIDY_BKP)

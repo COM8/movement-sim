@@ -3,25 +3,33 @@
 #include "sim/Entity.hpp"
 #include "sim/Simulator.hpp"
 #include <memory>
-#include <vector>
+#include <epoxy/gl.h>
 #include <gtkmm.h>
 
 namespace ui::widgets {
-class SimulationWidget : public Gtk::DrawingArea {
+class SimulationWidget : public Gtk::GLArea {
  private:
     std::shared_ptr<sim::Simulator> simulator{nullptr};
     std::shared_ptr<std::vector<sim::Entity>> entities;
+
+    // OPenGL:
+    GLuint m_Vao{0};
+    GLuint m_Buffer{0};
+    GLuint m_Program{0};
+    GLuint m_Mvp{0};
 
  public:
     SimulationWidget();
 
  private:
-    static void prep_widget();
-
-    void draw_text(const std::string& text, const Cairo::RefPtr<Cairo::Context>& ctx, double x, double y);
+    void prep_widget();
+    void prepare_shader();
+    void prepare_buffers();
 
     //-----------------------------Events:-----------------------------
-    void on_draw_handler(const Cairo::RefPtr<Cairo::Context>& ctx, int width, int height);
+    bool on_render_handler(const Glib::RefPtr<Gdk::GLContext>& ctx);
     bool on_tick(const Glib::RefPtr<Gdk::FrameClock>& frameClock);
+    void on_realized();
+    void on_unrealized();
 };
 }  // namespace ui::widgets
