@@ -28,8 +28,11 @@ Simulator::Simulator() {
 
 void Simulator::add_entities() {
     for (size_t i = 1; i <= MAX_ENTITIES; i++) {
+        Vec2 pos = Vec2::random_vec(0, WORLD_SIZE_X, 0, WORLD_SIZE_Y);
         entities.push_back(Entity{
-            Vec2::random_vec(0, WORLD_SIZE_X, 0, WORLD_SIZE_Y),
+            Rgb(),
+            pos,
+            pos,
             Vec2::random_vec(-3, 3, -3, 3),
             Entity::random_int(),
             false});

@@ -3,16 +3,19 @@
 layout (local_size_x = 1) in;
 
 struct EntityDescriptor {
-    vec2 pos;
+    vec3 color;
+    float padding1;
+    vec2 pos_cur;
+    vec2 pos_prev;
     vec2 direction;
     int rand_seed;
     bool is_valid;
-    vec2 padding; // Make sure we are alligned to 32 bytes like the original entity
+    vec4 padding2; // Make sure we are alligned to 64 bytes like the original entity
 };
 
 layout(push_constant) uniform PushConstants {
-	float worldSizeX;
-	float worldSizeY;
+	float world_size_x;
+	float world_size_y;
 } pushConsts;
 
 layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
@@ -52,19 +55,54 @@ precision lowp float;
 
 // ------------------------------------------------------------------------------------
 
+bool check_collision(uint index) {
+    bool collision = false;
+    if(entities[index].pos_cur.x > pushConsts.world_size_x) {
+        entities[index].pos_cur.x = pushConsts.world_size_x;
+        entities[index].direction = reflect(entities[index].direction, vec2(1, 0));
+        collision = true;
+    }
+    else if(entities[index].pos_cur.x < 0) {
+        entities[index].pos_cur.x = 0;
+        entities[index].direction = reflect(entities[index].direction, vec2(1, 0));
+        collision = true;
+    }
+
+    if(entities[index].pos_cur.y > pushConsts.world_size_y) {
+        entities[index].pos_cur.y = pushConsts.world_size_y;
+        entities[index].direction = reflect(entities[index].direction, vec2(0, 1));
+        collision = true;
+    }
+    else if(entities[index].pos_cur.y < 0) {
+        entities[index].pos_cur.y = 0;
+        entities[index].direction = reflect(entities[index].direction, vec2(0, 1));
+        collision = true;
+    }
+    return collision;
+}
+
+void move(uint index) {
+    entities[index].pos_prev = entities[index].pos_cur;
+    entities[index].pos_cur += entities[index].direction;
+}
+
+void set_random_color(uint index) {
+    int seed = entities[index].rand_seed;
+    entities[index].color.r = entities[index].pos_cur.x / pushConsts.world_size_x;
+    seed = nextInt(seed);
+    entities[index].color.g = entities[index].pos_cur.y / pushConsts.world_size_y;
+    seed = nextInt(seed);
+    entities[index].color.b = 0.0;
+    entities[index].rand_seed = nextInt(seed);
+}
+
 void main() {
     uint index = gl_GlobalInvocationID.x;
-    if(entities[index].is_valid) {
-        // int seed = entities[index].rand_seed;
-        // entities[index].pos.x += nextFloat(seed, 3);
-        // seed = nextInt(seed);
-        // entities[index].pos.y += nextFloat(seed, 3);
-        // seed = nextInt(seed);
-        // entities[index].rand_seed = seed;
-
-        
+    
+    move(index);
+    bool collision = check_collision(index);
+    if(collision) {
+        set_random_color(index);
     }
-    entities[index].pos = entities[index].pos.xy + entities[index].direction.xy;
-    entities[index].pos = mod(entities[index].pos.xy, vec2(pushConsts.worldSizeX, pushConsts.worldSizeY));
     entities[index].is_valid = true;
 }
