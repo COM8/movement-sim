@@ -60,15 +60,22 @@ void SimulationWidget::prepare_shader() {
 }
 
 GLfloat vertices[] = {
-    -0.5f, 0.5f, 1.0f, 0.0f, 0.0f,  // Top-left
-    0.5f, 0.5f, 0.0f, 1.0f, 0.0f,  // Top-right
-    0.5f, -0.5f, 0.0f, 0.0f, 1.0f,  // Bottom-right
-    -0.5f, -0.5f, 1.0f, 1.0f, 1.0f  // Bottom-left
+    0.25, 0.75, 1.0, 0.0, 0.0,  // Top-left
+    0.75, 0.75, 1.0, 0.0, 0.0,  // Top-right
+    0.75, 0.25, 1.0, 0.0, 0.0,  // Bottom-right
+    0.25, 0.25, 1.0, 0.0, 0.0,  // Bottom-left
+    //
+    -0.75, 0.75, 0.0, 1.0, 0.0,  // Top-left
+    -0.25, 0.75, 0.0, 1.0, 0.0,  // Top-right
+    -0.25, 0.25, 0.0, 1.0, 0.0,  // Bottom-right
+    -0.75, 0.25, 0.0, 1.0, 0.0  // Bottom-left
 };
 
 static const GLuint elements[] = {
     0, 1, 2,
-    2, 3, 0};
+    2, 3, 0,
+    4, 5, 6,
+    6, 7, 4};
 
 void SimulationWidget::prepare_buffers() {
     // Store Vertex array object settings:
@@ -117,7 +124,7 @@ GLuint SimulationWidget::compile_shader(const std::string& resourcePath, GLenum 
     return shader;
 }
 
-void SimulationWidget::bind_attributes() {
+void SimulationWidget::bind_attributes() const {
     glUseProgram(prog);
     GLint posAttrib = glGetAttribLocation(prog, "position");
     glEnableVertexAttribArray(posAttrib);
@@ -140,7 +147,8 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
         glClearColor(0, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+        // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
+        glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
 
         glFlush();
         return true;
