@@ -55,7 +55,7 @@ void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context
             unit = "us";
         }
     }
-    std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {:.2f}{}\nEntities: {}", simulator->get_tps(), tick_time, unit, simulator->get_entities().size());
+    std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {:.2f}{}\nEntities: {}", simulator->get_tps(), tick_time, unit, sim::MAX_ENTITIES);
     draw_text(stats, ctx, 5, 20);
 }
 

@@ -10,18 +10,22 @@ namespace ui::widgets {
 class SimulationWidget : public Gtk::GLArea {
  private:
     std::shared_ptr<sim::Simulator> simulator{nullptr};
-    std::shared_ptr<std::vector<sim::Entity>> entities;
+    std::shared_ptr<std::vector<sim::Entity>> entities{nullptr};
 
-    // OPenGL:
-    GLuint m_Vao{0};
-    GLuint m_Buffer{0};
-    GLuint m_Program{0};
-    GLuint m_Mvp{0};
+    // OpenGL:
+    GLuint vbo{0};
+    GLuint ebo{0};
+    GLuint prog{0};
+    GLuint vao{0};
+
+    GLuint fragShader{0};
+    GLuint vertShader{0};
 
  public:
     SimulationWidget();
 
  private:
+    static GLuint compile_shader(const std::string& resourcePath, GLenum type);
     void prep_widget();
     void prepare_shader();
     void prepare_buffers();

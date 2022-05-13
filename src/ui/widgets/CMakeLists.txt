@@ -8,6 +8,3 @@ add_library(ui_widgets STATIC SimulationWidget.cpp
                               SimulationSettingsBarWidget.hpp)
 
 target_link_libraries(ui_widgets PRIVATE PkgConfig::GTKMM logger sim PkgConfig::EPOXY)
-
-add_subdirectory(shader)
-add_dependencies(ui_widgets ui_widgets_shader)
