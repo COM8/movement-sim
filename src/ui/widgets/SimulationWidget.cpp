@@ -3,7 +3,9 @@
 #include "sim/Simulator.hpp"
 #include "spdlog/fmt/bundled/core.h"
 #include <cassert>
+#include <chrono>
 #include <string>
+#include <bits/chrono.h>
 #include <fmt/core.h>
 
 namespace ui::widgets {
@@ -40,19 +42,37 @@ void SimulationWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context>& ctx,
 
     // Entities:
     for (const sim::Entity& e : simulator->get_entities()) {
-        if (e.isValid) {
-            double x = (e.pos.x / sim::WORLD_SIZE_X) * static_cast<double>(width);
-            double y = (e.pos.y / sim::WORLD_SIZE_Y) * static_cast<double>(height);
-            ctx->rectangle(x - 0.5, y - 0.5, 1, 1);
-            ctx->set_source_rgb(1.0, 0, 0);
-            ctx->fill();
+        double x = (e.pos.x / sim::WORLD_SIZE_X) * static_cast<double>(width);
+        double y = (e.pos.y / sim::WORLD_SIZE_Y) * static_cast<double>(height);
+        ctx->rectangle(x - 0.5, y - 0.5, 1, 1);
+        if (e.is_valid) {
+            ctx->set_source_rgb(0.0, 1.0, 0);
+        } else {
+            ctx->set_source_rgb(1.0, 0, 0.0);
         }
+        ctx->fill();
     }
 
     ctx->restore();
 
     // Stats:
-    std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {}ns", simulator->get_tps(), simulator->get_avg_tick_time().count());
+    double tick_time = static_cast<double>(simulator->get_avg_tick_time().count());
+    std::string unit = "ns";
+    if (tick_time >= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::microseconds(1)).count()) {
+        if (tick_time >= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::milliseconds(1)).count()) {
+            if (tick_time >= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)).count()) {
+                tick_time /= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)).count();
+                unit = "s";
+            } else {
+                tick_time /= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::milliseconds(1)).count();
+                unit = "ms";
+            }
+        } else {
+            tick_time /= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::microseconds(1)).count();
+            unit = "us";
+        }
+    }
+    std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {:.2f}{}\nEntities: {} - {}", simulator->get_tps(), tick_time, unit, simulator->get_entities().size(), sizeof(sim::Entity));
     draw_text(stats, ctx, 5, 20);
 }
 

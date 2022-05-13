@@ -5,7 +5,9 @@ layout (local_size_x = 1) in;
 struct EntityDescriptor {
     vec2 pos;
     vec2 direction;
-    bool isValid;
+    int rand_seed;
+    bool is_valid;
+    vec2 padding; // Make sure we are alligned to 32 bytes like the original entity
 };
 
 layout(push_constant) uniform PushConstants {
@@ -52,12 +54,17 @@ precision lowp float;
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
-    if(entities[index].isValid) {
-        int rngSeed = int(entities[index].pos.x + entities[index].pos.y);
+    if(entities[index].is_valid) {
+        // int seed = entities[index].rand_seed;
+        // entities[index].pos.x += nextFloat(seed, 3);
+        // seed = nextInt(seed);
+        // entities[index].pos.y += nextFloat(seed, 3);
+        // seed = nextInt(seed);
+        // entities[index].rand_seed = seed;
 
-        entities[index].pos.x += nextFloat(rngSeed, 3);
-        entities[index].pos.y += nextFloat(rngSeed, 3) + 1;
-        // entities[index].pos = entities[index].pos.xy + entities[index].direction.xy;
-        entities[index].pos = mod(entities[index].pos.xy, vec2(pushConsts.worldSizeX, pushConsts.worldSizeY));
+        
     }
+    entities[index].pos = entities[index].pos.xy + entities[index].direction.xy;
+    entities[index].pos = mod(entities[index].pos.xy, vec2(pushConsts.worldSizeX, pushConsts.worldSizeY));
+    entities[index].is_valid = true;
 }

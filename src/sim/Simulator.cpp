@@ -20,7 +20,7 @@ Simulator::Simulator() {
     shader = shaders::utils::load_shader("sim/shader/random_move_struct.spv");
 
     add_entities();
-    tensorEntities = mgr.tensor(entities.data(), entities.size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eInt);
+    tensorEntities = mgr.tensor(entities.data(), entities.size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eDouble);
 
     params = {tensorEntities};
     algo = mgr.algorithm(params, shader, {}, {}, std::vector<float>{WORLD_SIZE_X, WORLD_SIZE_Y});
@@ -29,9 +29,10 @@ Simulator::Simulator() {
 void Simulator::add_entities() {
     for (size_t i = 1; i <= MAX_ENTITIES; i++) {
         entities.push_back(Entity{
-            {static_cast<float>(i * 5), static_cast<float>(i * 5)},
-            {static_cast<float>(i * 5), static_cast<float>(i * 5)},
-            true});
+            Vec2::random_vec(0, WORLD_SIZE_X, 0, WORLD_SIZE_Y),
+            Vec2::random_vec(-3, 3, -3, 3),
+            Entity::random_int(),
+            false});
     }
 }
 
