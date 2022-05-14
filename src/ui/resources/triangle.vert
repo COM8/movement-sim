@@ -1,5 +1,7 @@
 #version 330 core
 
+uniform vec2 worldSize;
+
 in vec2 position;
 in vec3 color;
 
@@ -8,5 +10,9 @@ out vec3 vColor;
 void main()
 {
     vColor = color;
-    gl_Position = vec4(position, 0.0, 1.0);
+
+    // Normalize to range [-1, 1]:
+    vec2 pos = (2 * (position / worldSize)) - 1;
+
+    gl_Position = vec4(pos, 0.0, 1.0);
 }

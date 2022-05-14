@@ -62,18 +62,6 @@ void SimulationWidget::prepare_shader() {
     }
 }
 
-GLfloat points[] = {
-    0.25, 0.75, 1.0, 0.0, 0.0,  // Top-left
-    0.75, 0.75, 1.0, 0.0, 0.0,  // Top-right
-    0.75, 0.25, 1.0, 0.0, 0.0,  // Bottom-right
-    0.25, 0.25, 1.0, 0.0, 0.0,  // Bottom-left
-    //
-    -0.75, 0.75, 0.0, 1.0, 0.0,  // Top-left
-    -0.25, 0.75, 0.0, 1.0, 0.0,  // Top-right
-    -0.25, 0.25, 0.0, 1.0, 0.0,  // Bottom-right
-    -0.75, 0.25, 0.0, 1.0, 0.0  // Bottom-left
-};
-
 void SimulationWidget::prepare_buffers() {
     // Store Vertex array object settings:
     glGenVertexArrays(1, &vao);
@@ -82,7 +70,7 @@ void SimulationWidget::prepare_buffers() {
     // Vertex buffer:
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(sim::Entity) * sim::MAX_ENTITIES, nullptr, GL_DYNAMIC_DRAW);
 }
 
 GLuint SimulationWidget::compile_shader(const std::string& resourcePath, GLenum type) {
@@ -116,16 +104,19 @@ GLuint SimulationWidget::compile_shader(const std::string& resourcePath, GLenum 
     return shader;
 }
 
-void SimulationWidget::bind_attributes() const {
-    glUseProgram(prog);
-    GLint posAttrib = glGetAttribLocation(prog, "position");
-    glEnableVertexAttribArray(posAttrib);
-    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), nullptr);
-
+void SimulationWidget::bind_attributes() {
     GLint colAttrib = glGetAttribLocation(prog, "color");
     glEnableVertexAttribArray(colAttrib);
+    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), nullptr);
+
+    GLint posAttrib = glGetAttribLocation(prog, "position");
+    glEnableVertexAttribArray(posAttrib);
     // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
-    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), reinterpret_cast<void*>(2 * sizeof(GLfloat)));
+    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), reinterpret_cast<void*>(4 * sizeof(GLfloat)));
+
+    worldSizeConst = glGetUniformLocation(prog, "worldSize");
+    rectSize = glGetUniformLocation(prog, "rectSize");
+    glUniform2f(rectSize, 5, 5);
 }
 
 //-----------------------------Events:-----------------------------
@@ -139,7 +130,20 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
         glClearColor(0, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glDrawArrays(GL_POINTS, 0, 8);
+        // Update the data on the GPU:
+        std::shared_ptr<std::vector<sim::Entity>> entities = simulator->get_entities();
+        if (entities) {
+            this->entities = entities;
+        }
+        if (this->entities) {
+            size_t size = this->entities->size();
+            // glBufferSubData(vbo, 0, static_cast<GLsizeiptr>(sizeof(sim::Entity) * size), static_cast<void*>(this->entities->data()));
+            glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Entity) * size), static_cast<void*>(this->entities->data()), GL_DYNAMIC_DRAW);
+
+            // Draw:
+            glUniform2f(worldSizeConst, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
+            glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(size));
+        }
 
         glFlush();
         return true;
@@ -164,6 +168,7 @@ void SimulationWidget::on_realized() {
         throw_if_error();
         prepare_buffers();
         prepare_shader();
+        glUseProgram(prog);
         bind_attributes();
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred making the context current during realize: {} - {} - {}", gle.domain(), gle.code(), gle.what());

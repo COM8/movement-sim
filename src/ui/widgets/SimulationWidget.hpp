@@ -16,6 +16,8 @@ class SimulationWidget : public Gtk::GLArea {
     GLuint vbo{0};
     GLuint prog{0};
     GLuint vao{0};
+    GLint worldSizeConst{0};
+    GLint rectSize{0};
 
     GLuint vertShader{0};
     GLuint geomShader{0};
@@ -29,7 +31,7 @@ class SimulationWidget : public Gtk::GLArea {
     void prep_widget();
     void prepare_shader();
     void prepare_buffers();
-    void bind_attributes() const;
+    void bind_attributes();
 
     //-----------------------------Events:-----------------------------
     bool on_render_handler(const Glib::RefPtr<Gdk::GLContext>& ctx);
