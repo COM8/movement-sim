@@ -4,4 +4,5 @@ set(RESOURCE_DEF ${CMAKE_CURRENT_SOURCE_DIR}/ui_resources.c.xml PARENT_SCOPE)
 set(RESOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 set(RESOURCE_DEPS ${CMAKE_CURRENT_SOURCE_DIR}/theme.css
                   ${CMAKE_CURRENT_SOURCE_DIR}/triangle.frag
-                  ${CMAKE_CURRENT_SOURCE_DIR}/triangle.vert PARENT_SCOPE)
+                  ${CMAKE_CURRENT_SOURCE_DIR}/triangle.vert
+                  ${CMAKE_CURRENT_SOURCE_DIR}/triangle.geom PARENT_SCOPE)

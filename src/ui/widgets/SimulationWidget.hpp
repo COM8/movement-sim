@@ -14,12 +14,12 @@ class SimulationWidget : public Gtk::GLArea {
 
     // OpenGL:
     GLuint vbo{0};
-    GLuint ebo{0};
     GLuint prog{0};
     GLuint vao{0};
 
-    GLuint fragShader{0};
     GLuint vertShader{0};
+    GLuint geomShader{0};
+    GLuint fragShader{0};
 
  public:
     SimulationWidget();

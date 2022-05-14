@@ -4,5 +4,6 @@
     <file>theme.css</file>
     <file>triangle.frag</file>
     <file>triangle.vert</file>
+    <file>triangle.geom</file>
   </gresource>
 </gresources>

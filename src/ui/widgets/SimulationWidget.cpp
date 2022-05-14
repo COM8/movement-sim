@@ -28,15 +28,18 @@ void SimulationWidget::prep_widget() {
 
 void SimulationWidget::prepare_shader() {
     // Load shader:
-    fragShader = compile_shader("/ui/triangle.frag", GL_FRAGMENT_SHADER);
-    assert(fragShader > 0);
     vertShader = compile_shader("/ui/triangle.vert", GL_VERTEX_SHADER);
     assert(vertShader > 0);
+    geomShader = compile_shader("/ui/triangle.geom", GL_GEOMETRY_SHADER);
+    assert(geomShader > 0);
+    fragShader = compile_shader("/ui/triangle.frag", GL_FRAGMENT_SHADER);
+    assert(fragShader > 0);
 
     // Prepare program:
     prog = glCreateProgram();
-    glAttachShader(prog, fragShader);
     glAttachShader(prog, vertShader);
+    glAttachShader(prog, geomShader);
+    glAttachShader(prog, fragShader);
     glBindFragDataLocation(prog, 0, "outColor");
     glLinkProgram(prog);
 
@@ -59,7 +62,7 @@ void SimulationWidget::prepare_shader() {
     }
 }
 
-GLfloat vertices[] = {
+GLfloat points[] = {
     0.25, 0.75, 1.0, 0.0, 0.0,  // Top-left
     0.75, 0.75, 1.0, 0.0, 0.0,  // Top-right
     0.75, 0.25, 1.0, 0.0, 0.0,  // Bottom-right
@@ -71,12 +74,6 @@ GLfloat vertices[] = {
     -0.75, 0.25, 0.0, 1.0, 0.0  // Bottom-left
 };
 
-static const GLuint elements[] = {
-    0, 1, 2,
-    2, 3, 0,
-    4, 5, 6,
-    6, 7, 4};
-
 void SimulationWidget::prepare_buffers() {
     // Store Vertex array object settings:
     glGenVertexArrays(1, &vao);
@@ -85,12 +82,7 @@ void SimulationWidget::prepare_buffers() {
     // Vertex buffer:
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    // Element buffer:
-    glGenBuffers(1, &ebo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
 }
 
 GLuint SimulationWidget::compile_shader(const std::string& resourcePath, GLenum type) {
@@ -147,8 +139,7 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
         glClearColor(0, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
-        glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
+        glDrawArrays(GL_POINTS, 0, 8);
 
         glFlush();
         return true;
@@ -183,12 +174,12 @@ void SimulationWidget::on_unrealized() {
     make_current();
     try {
         throw_if_error();
-        glDeleteProgram(prog);
-        glDeleteShader(fragShader);
+        // glDeleteProgram(prog);
         glDeleteShader(vertShader);
+        glDeleteShader(geomShader);
+        glDeleteShader(fragShader);
 
         glDeleteBuffers(1, &vbo);
-        glDeleteBuffers(1, &ebo);
         glDeleteVertexArrays(1, &vao);
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred deleting the context current during unrealize: {} - {} - {}", gle.domain(), gle.code(), gle.what());

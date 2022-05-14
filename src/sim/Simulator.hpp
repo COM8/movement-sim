@@ -48,6 +48,8 @@ class Simulator {
 
     std::shared_ptr<std::vector<Entity>> entities;
     std::shared_ptr<kp::Tensor> tensorEntities{nullptr};
+    std::shared_ptr<kp::TensorT<float>> tensorEntityVertices{nullptr};
+    std::shared_ptr<kp::TensorT<float>> tensorEntityVerticElements{nullptr};
 
  public:
     Simulator();
