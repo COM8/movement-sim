@@ -37,6 +37,6 @@ jobs:
         source-dir: ${{github.workspace}}
         cc: gcc
         cxx: g++
-        build-type: Debug
+        build-type: Release
         run-test: false
         ctest-options: -V
