@@ -75,6 +75,7 @@ clear_variable(DESTINATION CMAKE_CXX_FLAGS_DEBUG BACKUP CMAKE_CXX_FLAGS_DEBUG_BK
 FetchContent_Declare(fmt GIT_REPOSITORY https://github.com/fmtlib/fmt.git
                          GIT_TAG b6f4ceaed0a0a24ccf575fab6c56dd50ccf6f1a9) # The hash for the release commit of 8.1.1 from: https://github.com/fmtlib/fmt/releases
 FetchContent_MakeAvailable(fmt)
+include_directories(${fmt_SOURCE_DIR}/include)
 
 set(SPDLOG_INSTALL OFF)
 FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git
@@ -87,7 +88,7 @@ add_compile_definitions(KOMPUTE_LOG_LEVEL=6) # Disable Kompute logging
 FetchContent_Declare(kompute GIT_REPOSITORY https://github.com/COM8/kompute.git
                              GIT_TAG bd5933414dc13445734037bd1a8a2b8e52e659fc)
 FetchContent_MakeAvailable(kompute)
-include_directories(${kompute_SOURCE_DIR}/src/include) # Fix somehow broken include dirs
+include_directories(${kompute_SOURCE_DIR}/src/include)
 
 FetchContent_Declare(json GIT_REPOSITORY https://github.com/nlohmann/json.git
                           GIT_TAG v3.10.5)
