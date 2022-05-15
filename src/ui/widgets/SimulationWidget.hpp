@@ -2,6 +2,8 @@
 
 #include "sim/Entity.hpp"
 #include "sim/Simulator.hpp"
+#include "utils/TickDurationHistory.hpp"
+#include "utils/TickRate.hpp"
 #include <memory>
 #include <epoxy/gl.h>
 #include <gtkmm.h>
@@ -11,6 +13,9 @@ class SimulationWidget : public Gtk::GLArea {
  private:
     std::shared_ptr<sim::Simulator> simulator{nullptr};
     std::shared_ptr<std::vector<sim::Entity>> entities{nullptr};
+
+    utils::TickDurationHistory fpsHistory{};
+    utils::TickRate fps{};
 
     // OpenGL:
     GLuint vbo{0};
@@ -25,6 +30,9 @@ class SimulationWidget : public Gtk::GLArea {
 
  public:
     SimulationWidget();
+
+    [[nodiscard]] const utils::TickRate& get_fps() const;
+    [[nodiscard]] const utils::TickDurationHistory& get_fps_history() const;
 
  private:
     static GLuint compile_shader(const std::string& resourcePath, GLenum type);

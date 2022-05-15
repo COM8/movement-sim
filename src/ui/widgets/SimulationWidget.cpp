@@ -119,9 +119,19 @@ void SimulationWidget::bind_attributes() {
     glUniform2f(rectSize, 5, 5);
 }
 
+const utils::TickRate& SimulationWidget::get_fps() const {
+    return fps;
+}
+
+const utils::TickDurationHistory& SimulationWidget::get_fps_history() const {
+    return fpsHistory;
+}
+
 //-----------------------------Events:-----------------------------
 bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*ctx*/) {
     assert(simulator);
+
+    std::chrono::high_resolution_clock::time_point frameStart = std::chrono::high_resolution_clock::now();
 
     try {
         throw_if_error();
@@ -144,12 +154,15 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             glUniform2f(worldSizeConst, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
             glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(size));
         }
-
-        glFlush();
-        return true;
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred in the render callback of the GLArea: {} - {} - {}", gle.domain(), gle.code(), gle.what());
     }
+
+    std::chrono::high_resolution_clock::time_point frameEnd = std::chrono::high_resolution_clock::now();
+    fpsHistory.add_time(frameEnd - frameStart);
+
+    // FPS counter:
+    fps.tick();
     return false;
 }
 

@@ -9,7 +9,8 @@
 #include <fmt/core.h>
 
 namespace ui::widgets {
-SimulationOverlayWidget::SimulationOverlayWidget() : simulator(sim::Simulator::get_instance()) {
+SimulationOverlayWidget::SimulationOverlayWidget(SimulationWidget* simWidget) : simulator(sim::Simulator::get_instance()),
+                                                                                simWidget(simWidget) {
     prep_widget();
     set_draw_func(sigc::mem_fun(*this, &SimulationOverlayWidget::on_draw_handler));
     add_tick_callback(sigc::mem_fun(*this, &SimulationOverlayWidget::on_tick));
@@ -37,25 +38,17 @@ void SimulationOverlayWidget::draw_text(const std::string& text, const Cairo::Re
 //-----------------------------Events:-----------------------------
 void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context>& ctx, int /*width*/, int /*height*/) {
     assert(simulator);
+    assert(simWidget);
 
-    // Stats:
-    double tick_time = static_cast<double>(simulator->get_avg_tick_time().count());
-    std::string unit = "ns";
-    if (tick_time >= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::microseconds(1)).count()) {
-        if (tick_time >= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::milliseconds(1)).count()) {
-            if (tick_time >= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)).count()) {
-                tick_time /= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)).count();
-                unit = "s";
-            } else {
-                tick_time /= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::milliseconds(1)).count();
-                unit = "ms";
-            }
-        } else {
-            tick_time /= std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::microseconds(1)).count();
-            unit = "us";
-        }
-    }
-    std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {:.2f}{}\nEntities: {}", simulator->get_tps(), tick_time, unit, sim::MAX_ENTITIES);
+    double tps = simulator->get_tps().get_ticks();
+    std::string tpsTime = simulator->get_tps_history().get_avg_time_str();
+
+    double fps = simWidget->get_fps().get_ticks();
+    std::string fpsTime = simWidget->get_fps_history().get_avg_time_str();
+
+    std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {}\n", tps, tpsTime, sim::MAX_ENTITIES);
+    stats += fmt::format("FPS: {:.2f}\nFrame Time: {}\n", fps, fpsTime);
+    stats += fmt::format("Entities: {}", sim::MAX_ENTITIES);
     draw_text(stats, ctx, 5, 20);
 }
 

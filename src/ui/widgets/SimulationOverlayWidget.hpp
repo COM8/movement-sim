@@ -1,5 +1,6 @@
 #pragma once
 
+#include "SimulationWidget.hpp"
 #include "sim/Simulator.hpp"
 #include <memory>
 #include <gtkmm.h>
@@ -8,9 +9,10 @@ namespace ui::widgets {
 class SimulationOverlayWidget : public Gtk::DrawingArea {
  private:
     std::shared_ptr<sim::Simulator> simulator{nullptr};
+    SimulationWidget* simWidget{nullptr};
 
  public:
-    SimulationOverlayWidget();
+    explicit SimulationOverlayWidget(SimulationWidget* simWidget);
 
  private:
     static void prep_widget();

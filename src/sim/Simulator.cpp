@@ -16,7 +16,6 @@
 namespace sim {
 
 Simulator::Simulator() {
-    tickTimes.reserve(MAX_TICK_TIMES);
     shader = shaders::utils::load_shader("sim/shader/fall.spv");
 
     add_entities();
@@ -111,22 +110,11 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
         entities = std::make_shared<std::vector<Entity>>(tensorEntities->vector<Entity>());
     }
 
-    std::chrono::nanoseconds sinceLastTick = tickStart - lastTick;
-    lastTick = tickStart;
-
     std::chrono::high_resolution_clock::time_point tickEnd = std::chrono::high_resolution_clock::now();
-    add_tick_time(tickEnd - tickStart);
+    tpsHistory.add_time(tickEnd - tickStart);
 
     // TPS counter:
-    tpsCounterReset += sinceLastTick;
-    tpsCount++;
-    if (tpsCounterReset >= std::chrono::seconds(1)) {
-        // Ensure we calculate the TPS for exactly on second:
-        double tpsCorrectionFactor = static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)).count()) / static_cast<double>(tpsCounterReset.count());
-        tps = static_cast<double>(tpsCount) * tpsCorrectionFactor;
-        tpsCount -= tps;
-        tpsCounterReset -= std::chrono::seconds(1);
-    }
+    tps.tick();
 }
 
 void Simulator::continue_simulation() {
@@ -149,31 +137,11 @@ bool Simulator::is_simulating() const {
     return simulating;
 }
 
-double Simulator::get_tps() const {
+const utils::TickRate& Simulator::get_tps() const {
     return tps;
 }
-std::chrono::nanoseconds Simulator::get_avg_tick_time() const {
-    if (tickTimes.empty()) {
-        return std::chrono::nanoseconds(0);
-    }
 
-    // Create a local copy:
-    std::vector<std::chrono::nanoseconds> tickTimes = this->tickTimes;
-    std::chrono::nanoseconds sum(0);
-    for (const std::chrono::nanoseconds& tickTime : tickTimes) {
-        sum += tickTime;
-    }
-    return std::chrono::nanoseconds(sum.count() / tickTimes.size());
-}
-
-void Simulator::add_tick_time(const std::chrono::nanoseconds& tickTime) {
-    if (tickTimes.size() >= MAX_TICK_TIMES) {
-        tickTimes[tickTimesIndex++] = tickTime;
-        if (tickTimesIndex >= MAX_TICK_TIMES) {
-            tickTimesIndex = 0;
-        }
-    } else {
-        tickTimes.push_back(tickTime);
-    }
+const utils::TickDurationHistory& Simulator::get_tps_history() const {
+    return tpsHistory;
 }
 }  // namespace sim

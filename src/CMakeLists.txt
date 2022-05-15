@@ -7,6 +7,7 @@ SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 set(MAIN_EXECUTABLE ${PROJECT_NAME})
 
 add_subdirectory(logger)
+add_subdirectory(utils)
 add_subdirectory(sim)
 add_subdirectory(ui)
 
