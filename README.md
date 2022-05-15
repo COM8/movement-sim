@@ -6,8 +6,8 @@ GPU accelerated human movement simulator.
 
 #### Fedora
 ```
-sudo dnf install gtkmm40-devel libcurl-devel gcc cmake git
-sudo dnf install mesa-libEGL-devel vulkan-devel glslc
+sudo dnf install gtkmm4.0-devel libcurl-devel g++ clang cmake git
+sudo dnf install mesa-libEGL-devel vulkan-devel glslc vulkan-tools glslang
 ```
 
 ### Compiling
