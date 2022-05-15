@@ -7,4 +7,4 @@ add_library(ui_widgets STATIC SimulationWidget.cpp
                               SimulationSettingsBarWidget.cpp
                               SimulationSettingsBarWidget.hpp)
 
-target_link_libraries(ui_widgets PRIVATE PkgConfig::GTKMM logger sim PkgConfig::EPOXY)
+target_link_libraries(ui_widgets PRIVATE PkgConfig::GTKMM logger sim PkgConfig::EPOXY fmt::fmt)
