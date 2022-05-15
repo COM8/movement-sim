@@ -3,7 +3,7 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  debug-g++:
+  debug-gcc:
     runs-on: ubuntu-latest
     container: com8/gtkmm4_vulkan:latest
     steps:
@@ -22,7 +22,7 @@ jobs:
         run-test: false
         ctest-options: -V
     
-  release-g++:
+  release-gcc:
     runs-on: ubuntu-latest
     container: com8/gtkmm4_vulkan:latest
     steps:
