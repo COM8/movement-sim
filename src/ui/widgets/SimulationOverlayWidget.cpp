@@ -49,7 +49,7 @@ void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context
     std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {}\n", tps, tpsTime, sim::MAX_ENTITIES);
     stats += fmt::format("FPS: {:.2f}\nFrame Time: {}\n", fps, fpsTime);
     stats += fmt::format("Entities: {}", sim::MAX_ENTITIES);
-    draw_text(stats, ctx, 5, 20);
+    draw_text(stats, ctx, 5, 5);
 }
 
 bool SimulationOverlayWidget::on_tick(const Glib::RefPtr<Gdk::FrameClock>& /*frameClock*/) {
