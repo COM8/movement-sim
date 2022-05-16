@@ -111,10 +111,10 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
         retriveSeq->evalAwait();
         entities = std::make_shared<std::vector<Entity>>(tensorEntities->vector<Entity>());
         retriveSeq->evalAsync();
-        for (const Entity& e : *entities) {
-            assert(e.target.x >= 0 && e.target.x <= WORLD_SIZE_X);
-            assert(e.target.y >= 0 && e.target.y <= WORLD_SIZE_Y);
-        }
+        // for (const Entity& e : *entities) {
+        //     assert(e.target.x >= 0 && e.target.x <= WORLD_SIZE_X);
+        //     assert(e.target.y >= 0 && e.target.y <= WORLD_SIZE_Y);
+        // }
         /*float posX = (*entities)[0].pos.x;
         float posY = (*entities)[0].pos.y;
         float targetX = (*entities)[0].target.x;
