@@ -26,4 +26,14 @@ Vec2 Vec2::random_vec(float x_min, float x_max, float y_min, float y_max) {
 
     return Vec2{distr_x(gen), distr_y(gen)};
 }
+
+Rgb Rgb::random_color() {
+    static std::random_device device;
+    static std::mt19937 gen(device());
+    static std::uniform_real_distribution<float> distr(0, 1.0);
+    return Rgb{
+        distr(gen),
+        distr(gen),
+        distr(gen)};
+}
 }  // namespace sim

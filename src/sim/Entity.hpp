@@ -12,15 +12,16 @@ struct Rgb {
     float r{0};
     float g{0};
     float b{0};
+    static Rgb random_color();
 } __attribute__((aligned(16))) __attribute__((__packed__));
 
 struct Entity {
     Rgb color{1.0, 0.0, 0.0};
-    Vec2 pos_cur{};
-    Vec2 pos_prev{};
+    Vec2 pos{};
+    Vec2 target{};
     Vec2 direction{};
-    int rand_seed = {0};
-    bool is_valid{false};
+    int randomSeed = {0};
+    bool initialized{false};
 
     static int random_int();
 } __attribute__((aligned(64))) __attribute__((__packed__));

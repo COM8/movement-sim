@@ -16,7 +16,7 @@
 namespace sim {
 
 Simulator::Simulator() {
-    shader = shaders::utils::load_shader("sim/shader/fall.spv");
+    shader = shaders::utils::load_shader("sim/shader/random_move.spv");
 
     add_entities();
     tensorEntities = mgr.tensor(entities->data(), entities->size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eDouble);
@@ -29,11 +29,10 @@ void Simulator::add_entities() {
     entities = std::make_shared<std::vector<Entity>>();
     entities->reserve(MAX_ENTITIES);
     for (size_t i = 1; i <= MAX_ENTITIES; i++) {
-        Vec2 pos = Vec2::random_vec(0, WORLD_SIZE_X, 0, WORLD_SIZE_Y);
         entities->push_back(Entity{
-            Rgb(),
-            pos,
-            pos,
+            Rgb::random_color(),
+            Vec2::random_vec(0, WORLD_SIZE_X, 0, WORLD_SIZE_Y),
+            Vec2::random_vec(0, WORLD_SIZE_X, 0, WORLD_SIZE_Y),
             Vec2::random_vec(-3, 3, -3, 3),
             Entity::random_int(),
             false});
@@ -108,6 +107,13 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
     if (!entities) {
         retriveSeq->eval();
         entities = std::make_shared<std::vector<Entity>>(tensorEntities->vector<Entity>());
+        /*float posX = (*entities)[0].pos.x;
+        float posY = (*entities)[0].pos.y;
+        float targetX = (*entities)[0].target.x;
+        float targetY = (*entities)[0].target.y;
+        float directionX = (*entities)[0].direction.x;
+        float directionY = (*entities)[0].direction.y;
+        SPDLOG_INFO("Pos: {}/{}, Target: {}/{}, Direction: {}/{}", posX, posY, targetX, targetY, directionX, directionY);*/
     }
 
     std::chrono::high_resolution_clock::time_point tickEnd = std::chrono::high_resolution_clock::now();
@@ -115,6 +121,7 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
 
     // TPS counter:
     tps.tick();
+    std::this_thread::sleep_for(std::chrono::milliseconds(17));
 }
 
 void Simulator::continue_simulation() {
