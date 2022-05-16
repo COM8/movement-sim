@@ -88,6 +88,9 @@ void Simulator::sim_worker() {
     std::shared_ptr<kp::Sequence> retriveSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>(params);
     sendSeq->evalAwait();
 
+    // Make sure we have started receiving once:
+    retriveSeq->evalAsync();
+
     std::unique_lock<std::mutex> lk(waitMutex);
     while (state == SimulatorState::RUNNING) {
         if (!simulating) {
@@ -105,8 +108,13 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
 
     calcSeq->eval();
     if (!entities) {
-        retriveSeq->eval();
+        retriveSeq->evalAwait();
         entities = std::make_shared<std::vector<Entity>>(tensorEntities->vector<Entity>());
+        retriveSeq->evalAsync();
+        for (const Entity& e : *entities) {
+            assert(e.target.x >= 0 && e.target.x <= WORLD_SIZE_X);
+            assert(e.target.y >= 0 && e.target.y <= WORLD_SIZE_Y);
+        }
         /*float posX = (*entities)[0].pos.x;
         float posY = (*entities)[0].pos.y;
         float targetX = (*entities)[0].target.x;
@@ -121,7 +129,6 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
 
     // TPS counter:
     tps.tick();
-    std::this_thread::sleep_for(std::chrono::milliseconds(17));
 }
 
 void Simulator::continue_simulation() {

@@ -88,7 +88,6 @@ void new_target(uint index) {
     float targetY = nextFloat(entities[index].randSeed, pushConsts.worldSizeY);
     entities[index].randSeed = nextInt(entities[index].randSeed);
     entities[index].target = vec2(targetX, targetY);
-
 }
 
 void update_direction(uint index) {
@@ -107,31 +106,32 @@ void move(uint index) {
     else {
         entities[index].pos = entities[index].target;
         new_target(index);
+        update_direction(index);
     }
 }
 
-void set_random_color(uint index) {
-    int seed = entities[index].randSeed;
-    entities[index].color.r = entities[index].pos.x / pushConsts.worldSizeX;
-    seed = nextInt(seed);
-    entities[index].color.g = entities[index].pos.y / pushConsts.worldSizeY;
-    seed = nextInt(seed);
-    entities[index].color.b = 0.0;
-    entities[index].randSeed = nextInt(seed);
-}
+// void set_random_color(uint index) {
+//     int seed = entities[index].randSeed;
+//     entities[index].color.r = entities[index].pos.x / pushConsts.worldSizeX;
+//     seed = nextInt(seed);
+//     entities[index].color.g = entities[index].pos.y / pushConsts.worldSizeY;
+//     seed = nextInt(seed);
+//     entities[index].color.b = 0.0;
+//     entities[index].randSeed = nextInt(seed);
+// }
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
 
     if(!entities[index].initialized) {
         new_target(index);
+        update_direction(index);
         entities[index].initialized = true;
     }
 
     move(index);
+    if(check_collision(index)) {
+        // set_random_color(index);
+    }
     update_direction(index);
-    bool collision = check_collision(index);
-    // if(collision) {
-    //     set_random_color(index);
-    // }
 }
