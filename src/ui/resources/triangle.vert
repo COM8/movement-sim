@@ -2,8 +2,8 @@
 
 uniform vec2 worldSize;
 
-in vec2 position;
 in vec3 color;
+in vec2 position;
 
 out vec3 vColor;
 
