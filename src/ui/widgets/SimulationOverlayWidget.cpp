@@ -16,7 +16,11 @@ SimulationOverlayWidget::SimulationOverlayWidget(SimulationWidget* simWidget) : 
     add_tick_callback(sigc::mem_fun(*this, &SimulationOverlayWidget::on_tick));
 }
 
-void SimulationOverlayWidget::prep_widget() {}
+void SimulationOverlayWidget::prep_widget() {
+    // Disable focus since this widget is just a overlay for the actual simulation:
+    set_can_target(false);
+    set_can_focus(false);
+}
 
 void SimulationOverlayWidget::draw_text(const std::string& text, const Cairo::RefPtr<Cairo::Context>& ctx, double x, double y) {
     ctx->save();
@@ -54,10 +58,7 @@ void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context
 
 bool SimulationOverlayWidget::on_tick(const Glib::RefPtr<Gdk::FrameClock>& /*frameClock*/) {
     assert(simulator);
-
-    if (simulator->is_simulating()) {
-        queue_draw();
-    }
+    queue_draw();
     return true;
 }
 }  // namespace ui::widgets

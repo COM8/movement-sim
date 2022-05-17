@@ -15,7 +15,7 @@ class SimulationOverlayWidget : public Gtk::DrawingArea {
     explicit SimulationOverlayWidget(SimulationWidget* simWidget);
 
  private:
-    static void prep_widget();
+    void prep_widget();
 
     void draw_text(const std::string& text, const Cairo::RefPtr<Cairo::Context>& ctx, double x, double y);
 

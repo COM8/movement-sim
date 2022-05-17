@@ -6,10 +6,12 @@ in vec3 color;
 in vec2 position;
 
 out vec3 vColor;
+out vec2 vPosition;
 
 void main()
 {
     vColor = color;
+    vPosition = position;
 
     // Normalize to range [-1, 1]:
     vec2 pos = (2 * (position / worldSize)) - 1;

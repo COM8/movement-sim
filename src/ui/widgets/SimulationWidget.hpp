@@ -7,9 +7,11 @@
 #include <memory>
 #include <epoxy/gl.h>
 #include <gtkmm.h>
+#include <gtkmm/glarea.h>
+#include <gtkmm/scrolledwindow.h>
 
 namespace ui::widgets {
-class SimulationWidget : public Gtk::GLArea {
+class SimulationWidget : public Gtk::ScrolledWindow {
  private:
     std::shared_ptr<sim::Simulator> simulator{nullptr};
     std::shared_ptr<std::vector<sim::Entity>> entities{nullptr};
@@ -22,11 +24,14 @@ class SimulationWidget : public Gtk::GLArea {
     GLuint prog{0};
     GLuint vao{0};
     GLint worldSizeConst{0};
-    GLint rectSize{0};
+    GLint rectSizeConst{0};
+    GLint viewPortConst{0};
 
     GLuint vertShader{0};
     GLuint geomShader{0};
     GLuint fragShader{0};
+
+    Gtk::GLArea glArea;
 
  public:
     SimulationWidget();
@@ -46,5 +51,6 @@ class SimulationWidget : public Gtk::GLArea {
     bool on_tick(const Glib::RefPtr<Gdk::FrameClock>& frameClock);
     void on_realized();
     void on_unrealized();
+    void on_adjustment_changed();
 };
 }  // namespace ui::widgets
