@@ -34,6 +34,8 @@ class SimulationWidget : public Gtk::ScrolledWindow {
     Gtk::GLArea glArea;
 
  public:
+    bool enableUiUpdates{true};
+
     SimulationWidget();
 
     [[nodiscard]] const utils::TickRate& get_fps() const;

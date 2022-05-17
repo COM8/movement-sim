@@ -3,7 +3,8 @@
 #include <gtkmm/window.h>
 
 namespace ui::windows {
-MainWindow::MainWindow() : simulationOverlayWidget(&simulationWidget) { prep_window(); }
+MainWindow::MainWindow() : simulationOverlayWidget(&simulationWidget),
+                           simulationSettingsBarWidget(&simulationWidget) { prep_window(); }
 
 void MainWindow::prep_window() {
     set_title("Movement Simulator");

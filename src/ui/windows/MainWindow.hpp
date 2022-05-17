@@ -12,9 +12,9 @@ namespace ui::windows {
 class MainWindow : public Gtk::Window {
  private:
     Gtk::Button inspectorBtn;
-    widgets::SimulationSettingsBarWidget simulationSettingsBarWidget;
     widgets::SimulationWidget simulationWidget;
     widgets::SimulationOverlayWidget simulationOverlayWidget;
+    widgets::SimulationSettingsBarWidget simulationSettingsBarWidget;
     Gtk::Box mainBox{Gtk::Orientation::VERTICAL};
     Gtk::Overlay simulationOverlay;
 

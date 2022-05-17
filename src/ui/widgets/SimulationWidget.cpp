@@ -152,9 +152,11 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Update the data on the GPU:
-        std::shared_ptr<std::vector<sim::Entity>> entities = simulator->get_entities();
-        if (entities) {
-            this->entities = entities;
+        if (enableUiUpdates) {
+            std::shared_ptr<std::vector<sim::Entity>> entities = simulator->get_entities();
+            if (entities) {
+                this->entities = entities;
+            }
         }
         if (this->entities) {
             size_t size = this->entities->size();
