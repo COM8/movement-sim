@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-add_library(ui_widgets STATIC SimulationWidget.cpp
+add_library(ui_widgets SimulationWidget.cpp
                               SimulationWidget.hpp
                               SimulationOverlayWidget.cpp
                               SimulationOverlayWidget.hpp
