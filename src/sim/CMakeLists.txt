@@ -7,5 +7,4 @@ add_library(sim Simulator.cpp
                 Entity.cpp
                 Entity.hpp)
 
-target_link_libraries(sim PRIVATE kompute::kompute logger sim_shaders_utils utils)
-add_dependencies(sim sim_shader)
+target_link_libraries(sim PRIVATE kompute::kompute logger sim_shader utils)

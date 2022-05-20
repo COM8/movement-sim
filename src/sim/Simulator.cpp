@@ -1,7 +1,8 @@
 #include "Simulator.hpp"
+#include "fall.hpp"
 #include "kompute/Tensor.hpp"
 #include "logger/Logger.hpp"
-#include "shader/utils/Utils.hpp"
+#include "random_move.hpp"
 #include "sim/Entity.hpp"
 #include "spdlog/spdlog.h"
 #include <cassert>
@@ -16,7 +17,7 @@
 namespace sim {
 
 Simulator::Simulator() {
-    shader = shaders::utils::load_shader("sim/shader/random_move.spv");
+    shader = std::vector(RANDOM_MOVE_COMP_SPV.begin(), RANDOM_MOVE_COMP_SPV.end());
 
     add_entities();
     tensorEntities = mgr.tensor(entities->data(), entities->size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eDouble);
