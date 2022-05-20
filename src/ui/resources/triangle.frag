@@ -10,8 +10,8 @@ out vec4 outColor;
 void main()
 {
     // Discard invisible stuff:
-    if(fPosition.x < viewPort.x || fPosition.x > viewPort.y || fPosition.y < viewPort.z || fPosition.y > viewPort.w) {
-        discard;
-    }
+    // if(fPosition.x < viewPort.x || fPosition.x > viewPort.y || fPosition.y < viewPort.z || fPosition.y > viewPort.w) {
+    //     discard;
+    // }
     outColor = vec4(fColor, 1.0);
 }
