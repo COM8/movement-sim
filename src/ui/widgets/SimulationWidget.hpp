@@ -26,12 +26,14 @@ class SimulationWidget : public Gtk::ScrolledWindow {
     GLint worldSizeConst{0};
     GLint rectSizeConst{0};
     GLint viewPortConst{0};
+    GLint zoomFactorConst{0};
 
     GLuint vertShader{0};
     GLuint geomShader{0};
     GLuint fragShader{0};
 
     Gtk::GLArea glArea;
+    float zoomFactor{1};
 
  public:
     bool enableUiUpdates{true};
@@ -40,6 +42,9 @@ class SimulationWidget : public Gtk::ScrolledWindow {
 
     [[nodiscard]] const utils::TickRate& get_fps() const;
     [[nodiscard]] const utils::TickDurationHistory& get_fps_history() const;
+
+    void set_zoom_factor(float zoomFactor);
+    [[nodiscard]] float get_zoom_factor() const;
 
  private:
     static GLuint compile_shader(const std::string& resourcePath, GLenum type);

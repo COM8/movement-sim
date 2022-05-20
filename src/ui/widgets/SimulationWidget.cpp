@@ -6,6 +6,7 @@
 #include "spdlog/spdlog.h"
 #include <cassert>
 #include <chrono>
+#include <cmath>
 #include <string>
 #include <bits/chrono.h>
 #include <epoxy/gl.h>
@@ -19,7 +20,21 @@ SimulationWidget::SimulationWidget() : simulator(sim::Simulator::get_instance())
     prep_widget();
 }
 
+void SimulationWidget::set_zoom_factor(float zoomFactor) {
+    assert(zoomFactor > 0);
+    this->zoomFactor = zoomFactor;
+    float widthF = static_cast<float>(sim::WORLD_SIZE_X) * this->zoomFactor;
+    int width = static_cast<int>(widthF);
+    float heightF = static_cast<float>(sim::WORLD_SIZE_X) * this->zoomFactor;
+    int height = static_cast<int>(heightF);
+    glUniform1f(zoomFactorConst, this->zoomFactor);
+    glArea.set_size_request(width, height);
+    glArea.queue_draw();
+}
+
 void SimulationWidget::prep_widget() {
+    set_expand();
+
     get_vadjustment()->signal_value_changed().connect(sigc::mem_fun(*this, &SimulationWidget::on_adjustment_changed));
     get_hadjustment()->signal_value_changed().connect(sigc::mem_fun(*this, &SimulationWidget::on_adjustment_changed));
 
@@ -128,6 +143,9 @@ void SimulationWidget::bind_attributes() {
     glUniform2f(rectSizeConst, 1, 1);
 
     viewPortConst = glGetUniformLocation(prog, "viewPort");
+
+    zoomFactorConst = glGetUniformLocation(prog, "zoomFactor");
+    glUniform1f(zoomFactorConst, 1);
 }
 
 const utils::TickRate& SimulationWidget::get_fps() const {
@@ -136,6 +154,10 @@ const utils::TickRate& SimulationWidget::get_fps() const {
 
 const utils::TickDurationHistory& SimulationWidget::get_fps_history() const {
     return fpsHistory;
+}
+
+float SimulationWidget::get_zoom_factor() const {
+    return zoomFactor;
 }
 
 //-----------------------------Events:-----------------------------
@@ -165,9 +187,9 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             // Update view port:
             GLfloat viewPortMinH = static_cast<GLfloat>(get_hadjustment()->get_value());
             GLfloat viewPortMaxH = static_cast<GLfloat>(get_hadjustment()->get_value() + get_width());
-            GLfloat viewPortMinV = static_cast<GLfloat>(get_vadjustment()->get_value());
-            GLfloat viewPortMaxV = static_cast<GLfloat>(get_vadjustment()->get_value() + get_height());
-            glUniform4f(viewPortConst, viewPortMinH, viewPortMaxH, sim::WORLD_SIZE_Y - viewPortMaxV, sim::WORLD_SIZE_Y - viewPortMinV);
+            GLfloat viewPortMinV = (static_cast<GLfloat>(get_vadjustment()->get_value()));
+            GLfloat viewPortMaxV = (static_cast<GLfloat>(get_vadjustment()->get_value() + get_height()));
+            glUniform4f(viewPortConst, viewPortMinH, viewPortMaxH, viewPortMaxV, viewPortMinV);
 
             // Draw:
             glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(size));

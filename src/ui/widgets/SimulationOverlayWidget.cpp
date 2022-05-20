@@ -52,7 +52,8 @@ void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context
 
     std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {}\n", tps, tpsTime, sim::MAX_ENTITIES);
     stats += fmt::format("FPS: {:.2f}\nFrame Time: {}\n", fps, fpsTime);
-    stats += fmt::format("Entities: {}", sim::MAX_ENTITIES);
+    stats += fmt::format("Entities: {}\n", sim::MAX_ENTITIES);
+    stats += fmt::format("Zoom: {}", simWidget->get_zoom_factor());
     draw_text(stats, ctx, 5, 5);
 }
 

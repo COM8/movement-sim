@@ -14,6 +14,11 @@ class SimulationSettingsBarWidget : public Gtk::Box {
     Gtk::Switch simulateSwitch;
     Gtk::Switch renderSwitch;
 
+    Gtk::Button zoomInBtn;
+    Gtk::Button zoomOutBtn;
+    Gtk::Button zoomResetBtn;
+    Gtk::Button zoomFitBtn;
+
     std::shared_ptr<sim::Simulator> simulator{nullptr};
 
  public:
@@ -25,5 +30,9 @@ class SimulationSettingsBarWidget : public Gtk::Box {
     //-----------------------------Events:-----------------------------
     void on_simulate_toggled();
     void on_render_toggled();
+    void on_zoom_in_clicked();
+    void on_zoom_out_clicked();
+    void on_zoom_reset_clicked();
+    void on_zoom_fit_clicked();
 };
 }  // namespace ui::widgets
