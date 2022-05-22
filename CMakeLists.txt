@@ -8,6 +8,7 @@ project("mSim"
 set(VERSION_NAME "dev")
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 macro(movement_simulator_option OPTION_NAME OPTION_TEXT OPTION_DEFAULT)
     option(${OPTION_NAME} ${OPTION_TEXT} ${OPTION_DEFAULT})
@@ -21,7 +22,7 @@ macro(movement_simulator_option OPTION_NAME OPTION_TEXT OPTION_DEFAULT)
     message(STATUS "  ${OPTION_NAME}: ${${OPTION_NAME}}")
 endmacro()
 
-macro(movement_simulator_log_level OPTION_NAME OPTION_TEXT OPTION_DEFAULT)
+macro(movement_simulator_log_level_option OPTION_NAME OPTION_TEXT OPTION_DEFAULT)
     set(${OPTION_NAME} ${OPTION_DEFAULT} CACHE STRING ${OPTION_TEXT})
     set_property(CACHE ${OPTION_NAME} PROPERTY STRINGS "Default" "Trace" "Debug" "Info" "Warn" "Error" "Critical" "Off")
     if(DEFINED ENV{${OPTION_NAME}})
@@ -38,7 +39,7 @@ message(STATUS "Movement Simulator client options")
 message(STATUS "=======================================================")
 movement_simulator_option(MOVEMENT_SIMULATOR_STATIC_ANALYZE "Set to ON to enable the GCC 10 static analysis. If enabled, MOVEMENT_SIMULATOR_ENABLE_LINTING has to be disabled." OFF)
 movement_simulator_option(MOVEMENT_SIMULATOR_ENABLE_LINTING "Set to ON to enable clang linting. If enabled, MOVEMENT_SIMULATOR_STATIC_ANALYZE has to be disabled." OFF)
-movement_simulator_log_level(MOVEMENT_SIMULATOR_LOG_LEVEL "Sets the log level. 'Default' will set the log level to 'Debug' for debug builds and 'Info' for release builds." "Off")
+movement_simulator_log_level_option(MOVEMENT_SIMULATOR_LOG_LEVEL "Sets the log level. 'Default' will set the log level to 'Debug' for debug builds and 'Info' for release builds." "Off")
 message(STATUS "=======================================================")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
