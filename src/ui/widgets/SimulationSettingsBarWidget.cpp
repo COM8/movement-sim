@@ -96,5 +96,6 @@ void SimulationSettingsBarWidget::on_zoom_fit_clicked() {
     float zoomY = static_cast<float>(simWidget->get_height()) / sim::WORLD_SIZE_Y;
     zoomFactor = zoomX > zoomY ? zoomY : zoomX;
     simWidget->set_zoom_factor(zoomFactor);
+    zoomInBtn.set_sensitive(true);
 }
 }  // namespace ui::widgets
