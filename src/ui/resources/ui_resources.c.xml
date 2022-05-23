@@ -2,8 +2,8 @@
 <gresources>
   <gresource prefix="/ui/">
     <file>theme.css</file>
-    <file>triangle.frag</file>
-    <file>triangle.vert</file>
-    <file>triangle.geom</file>
+    <file>person.frag</file>
+    <file>person.vert</file>
+    <file>person.geom</file>
   </gresource>
 </gresources>

@@ -50,11 +50,11 @@ void SimulationWidget::prep_widget() {
 
 void SimulationWidget::prepare_shader() {
     // Load shader:
-    vertShader = compile_shader("/ui/triangle.vert", GL_VERTEX_SHADER);
+    vertShader = compile_shader("/ui/person.vert", GL_VERTEX_SHADER);
     assert(vertShader > 0);
-    geomShader = compile_shader("/ui/triangle.geom", GL_GEOMETRY_SHADER);
+    geomShader = compile_shader("/ui/person.geom", GL_GEOMETRY_SHADER);
     assert(geomShader > 0);
-    fragShader = compile_shader("/ui/triangle.frag", GL_FRAGMENT_SHADER);
+    fragShader = compile_shader("/ui/person.frag", GL_FRAGMENT_SHADER);
     assert(fragShader > 0);
 
     // Prepare program:
