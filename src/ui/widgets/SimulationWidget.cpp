@@ -7,6 +7,7 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <string>
 #include <bits/chrono.h>
 #include <epoxy/gl.h>
@@ -14,6 +15,15 @@
 #include <fmt/core.h>
 #include <glibconfig.h>
 #include <gtkmm/gesturezoom.h>
+
+// Error codes: https://www.khronos.org/opengl/wiki/OpenGL_Error
+#define GLERR                                             \
+    {                                                     \
+        GLuint glErr;                                     \
+        while ((glErr = glGetError()) != GL_NO_ERROR) {   \
+            SPDLOG_ERROR("glGetError() = 0x{:X}", glErr); \
+        }                                                 \
+    }
 
 namespace ui::widgets {
 SimulationWidget::SimulationWidget() : simulator(sim::Simulator::get_instance()) {
@@ -66,6 +76,7 @@ void SimulationWidget::prepare_shader() {
     glAttachShader(personShaderProg, personFragShader);
     glBindFragDataLocation(personShaderProg, 0, "outColor");
     glLinkProgram(personShaderProg);
+    GLERR;
 
     // Check for errors during linking:
     GLint status = GL_FALSE;
@@ -85,6 +96,7 @@ void SimulationWidget::prepare_shader() {
         glDetachShader(personShaderProg, personVertShader);
         glDetachShader(personShaderProg, personGeomShader);
     }
+    GLERR;
 
     // Screen quad shader:
 
@@ -95,6 +107,7 @@ void SimulationWidget::prepare_shader() {
     assert(screenSquareGeomShader > 0);
     screenSquareFragShader = compile_shader("/ui/screen_square.frag", GL_FRAGMENT_SHADER);
     assert(screenSquareFragShader > 0);
+    GLERR;
 
     // Prepare program:
     screenSquareShaderProg = glCreateProgram();
@@ -102,7 +115,7 @@ void SimulationWidget::prepare_shader() {
     glAttachShader(screenSquareShaderProg, screenSquareGeomShader);
     glAttachShader(screenSquareShaderProg, screenSquareFragShader);
     glLinkProgram(screenSquareShaderProg);
-    glUniform1i(glGetUniformLocation(screenSquareShaderProg, "screenTexture"), 0);
+    GLERR;
 
     // Check for errors during linking:
     status = GL_FALSE;
@@ -122,6 +135,7 @@ void SimulationWidget::prepare_shader() {
         glDetachShader(screenSquareShaderProg, screenSquareGeomShader);
         glDetachShader(screenSquareShaderProg, screenSquareFragShader);
     }
+    GLERR;
 }
 
 void SimulationWidget::prepare_buffers() {
@@ -143,11 +157,15 @@ void SimulationWidget::prepare_buffers() {
 
     // Frame buffer texture:
     glGenTextures(1, &fbufTexture);
-    glBindTexture(GL_TEXTURE, fbufTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    GLERR;
+    glBindTexture(GL_TEXTURE_2D, fbufTexture);
+    GLERR;
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB8, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
+    GLERR;
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    GLERR;
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbufTexture, 0);
+    GLERR;
 
     // Render buffer for depth and stencil testing:
     glGenRenderbuffers(1, &rBuf);
@@ -156,6 +174,8 @@ void SimulationWidget::prepare_buffers() {
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rBuf);
     assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+    GLERR;
+
     glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);
 }
 
@@ -186,12 +206,14 @@ GLuint SimulationWidget::compile_shader(const std::string& resourcePath, GLenum 
         glDeleteShader(shader);
         return -1;
     }
+    GLERR;
     SPDLOG_DEBUG("Compiling shader '{}' was successful.", resourcePath);
     return shader;
 }
 
 void SimulationWidget::bind_attributes() {
     // Person shader:
+    glUseProgram(personShaderProg);
     GLint colAttrib = glGetAttribLocation(personShaderProg, "color");
     glEnableVertexAttribArray(colAttrib);
     glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), nullptr);
@@ -211,8 +233,12 @@ void SimulationWidget::bind_attributes() {
 
     zoomFactorConst = glGetUniformLocation(personShaderProg, "zoomFactor");
     glUniform1f(zoomFactorConst, 1);
+    GLERR;
 
     // Screen quad shader:
+    glUseProgram(screenSquareShaderProg);
+    glUniform1i(glGetUniformLocation(screenSquareShaderProg, "screenTexture"), 0);
+    GLERR;
 }
 
 const utils::TickRate& SimulationWidget::get_fps() const {
@@ -253,8 +279,9 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             // 1.0 Draw to buffer:
             glBindFramebuffer(GL_FRAMEBUFFER, fbuf);
             glEnable(GL_DEPTH_TEST);
-            glClearColor(0, 1, 0, 0);
+            glClearColor(0, 0, 0, 0);
             glClear(GL_COLOR_BUFFER_BIT);
+            GLERR;
 
             // 1.1 Blur:
 
@@ -273,15 +300,18 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
 
             // 2.0 Draw to screen:
             glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);
+            GLERR;
 
             // 2.1 Clear the screen:
-            glClearColor(1, 0, 0, 0);
+            glClearColor(0, 0, 0, 0);
             glClear(GL_COLOR_BUFFER_BIT);
+            GLERR;
 
             // 2.2 Draw texture from frame buffer:
             glUseProgram(screenSquareShaderProg);
             glBindTexture(GL_TEXTURE_2D, fbufTexture);
             glDrawArrays(GL_POINTS, 0, 1);
+            GLERR;
         }
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred in the render callback of the GLArea: {} - {} - {}", gle.domain(), gle.code(), gle.what());
@@ -299,8 +329,8 @@ bool SimulationWidget::on_tick(const Glib::RefPtr<Gdk::FrameClock>& /*frameClock
     assert(simulator);
 
     if (simulator->is_simulating()) {
-        glArea.queue_draw();
     }
+    glArea.queue_draw();
     return true;
 }
 
