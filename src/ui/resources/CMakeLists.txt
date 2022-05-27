@@ -5,4 +5,7 @@ set(RESOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 set(RESOURCE_DEPS ${CMAKE_CURRENT_SOURCE_DIR}/theme.css
                   ${CMAKE_CURRENT_SOURCE_DIR}/person.frag
                   ${CMAKE_CURRENT_SOURCE_DIR}/person.vert
-                  ${CMAKE_CURRENT_SOURCE_DIR}/person.geom PARENT_SCOPE)
+                  ${CMAKE_CURRENT_SOURCE_DIR}/person.geom
+                  ${CMAKE_CURRENT_SOURCE_DIR}/screen_square.frag
+                  ${CMAKE_CURRENT_SOURCE_DIR}/screen_square.vert
+                  ${CMAKE_CURRENT_SOURCE_DIR}/screen_square.geom PARENT_SCOPE)

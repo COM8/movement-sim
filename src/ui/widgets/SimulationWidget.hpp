@@ -20,17 +20,27 @@ class SimulationWidget : public Gtk::ScrolledWindow {
     utils::TickRate fps{};
 
     // OpenGL:
+    GLint defaultFb{0};
+
     GLuint vbo{0};
-    GLuint prog{0};
     GLuint vao{0};
+    GLuint fbuf{0};
+    GLuint rBuf{0};
+    GLuint fbufTexture{0};
     GLint worldSizeConst{0};
     GLint rectSizeConst{0};
     GLint viewPortConst{0};
     GLint zoomFactorConst{0};
 
-    GLuint vertShader{0};
-    GLuint geomShader{0};
-    GLuint fragShader{0};
+    GLuint personShaderProg{0};
+    GLuint personVertShader{0};
+    GLuint personGeomShader{0};
+    GLuint personFragShader{0};
+
+    GLuint screenSquareShaderProg{0};
+    GLuint screenSquareVertShader{0};
+    GLuint screenSquareGeomShader{0};
+    GLuint screenSquareFragShader{0};
 
     Gtk::GLArea glArea;
     float zoomFactor{1};

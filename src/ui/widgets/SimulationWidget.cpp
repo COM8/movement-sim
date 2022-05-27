@@ -49,42 +49,85 @@ void SimulationWidget::prep_widget() {
 }
 
 void SimulationWidget::prepare_shader() {
+    // Person shader:
+
     // Load shader:
-    vertShader = compile_shader("/ui/person.vert", GL_VERTEX_SHADER);
-    assert(vertShader > 0);
-    geomShader = compile_shader("/ui/person.geom", GL_GEOMETRY_SHADER);
-    assert(geomShader > 0);
-    fragShader = compile_shader("/ui/person.frag", GL_FRAGMENT_SHADER);
-    assert(fragShader > 0);
+    personVertShader = compile_shader("/ui/person.vert", GL_VERTEX_SHADER);
+    assert(personVertShader > 0);
+    personGeomShader = compile_shader("/ui/person.geom", GL_GEOMETRY_SHADER);
+    assert(personGeomShader > 0);
+    personFragShader = compile_shader("/ui/person.frag", GL_FRAGMENT_SHADER);
+    assert(personFragShader > 0);
 
     // Prepare program:
-    prog = glCreateProgram();
-    glAttachShader(prog, vertShader);
-    glAttachShader(prog, geomShader);
-    glAttachShader(prog, fragShader);
-    glBindFragDataLocation(prog, 0, "outColor");
-    glLinkProgram(prog);
+    personShaderProg = glCreateProgram();
+    glAttachShader(personShaderProg, personVertShader);
+    glAttachShader(personShaderProg, personGeomShader);
+    glAttachShader(personShaderProg, personFragShader);
+    glBindFragDataLocation(personShaderProg, 0, "outColor");
+    glLinkProgram(personShaderProg);
 
     // Check for errors during linking:
     GLint status = GL_FALSE;
-    glGetProgramiv(prog, GL_LINK_STATUS, &status);
+    glGetProgramiv(personShaderProg, GL_LINK_STATUS, &status);
     if (status == GL_FALSE) {
         int log_len = 0;
-        glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &log_len);
+        glGetProgramiv(personShaderProg, GL_INFO_LOG_LENGTH, &log_len);
 
         std::string log_msg;
         log_msg.resize(log_len);
-        glGetProgramInfoLog(prog, log_len, nullptr, static_cast<GLchar*>(log_msg.data()));
-        SPDLOG_ERROR("Linking failed: {}", log_msg);
-        glDeleteProgram(prog);
-        prog = 0;
+        glGetProgramInfoLog(personShaderProg, log_len, nullptr, static_cast<GLchar*>(log_msg.data()));
+        SPDLOG_ERROR("Linking person shader program failed: {}", log_msg);
+        glDeleteProgram(personShaderProg);
+        personShaderProg = 0;
     } else {
-        glDetachShader(prog, fragShader);
-        glDetachShader(prog, vertShader);
+        glDetachShader(personShaderProg, personFragShader);
+        glDetachShader(personShaderProg, personVertShader);
+        glDetachShader(personShaderProg, personGeomShader);
+    }
+
+    // Screen quad shader:
+
+    // Load shader:
+    screenSquareVertShader = compile_shader("/ui/screen_square.vert", GL_VERTEX_SHADER);
+    assert(screenSquareVertShader > 0);
+    screenSquareGeomShader = compile_shader("/ui/screen_square.geom", GL_GEOMETRY_SHADER);
+    assert(screenSquareGeomShader > 0);
+    screenSquareFragShader = compile_shader("/ui/screen_square.frag", GL_FRAGMENT_SHADER);
+    assert(screenSquareFragShader > 0);
+
+    // Prepare program:
+    screenSquareShaderProg = glCreateProgram();
+    glAttachShader(screenSquareShaderProg, screenSquareVertShader);
+    glAttachShader(screenSquareShaderProg, screenSquareGeomShader);
+    glAttachShader(screenSquareShaderProg, screenSquareFragShader);
+    glLinkProgram(screenSquareShaderProg);
+    glUniform1i(glGetUniformLocation(screenSquareShaderProg, "screenTexture"), 0);
+
+    // Check for errors during linking:
+    status = GL_FALSE;
+    glGetProgramiv(screenSquareShaderProg, GL_LINK_STATUS, &status);
+    if (status == GL_FALSE) {
+        int log_len = 0;
+        glGetProgramiv(screenSquareShaderProg, GL_INFO_LOG_LENGTH, &log_len);
+
+        std::string log_msg;
+        log_msg.resize(log_len);
+        glGetProgramInfoLog(screenSquareShaderProg, log_len, nullptr, static_cast<GLchar*>(log_msg.data()));
+        SPDLOG_ERROR("Linking screen square shader program failed: {}", log_msg);
+        glDeleteProgram(screenSquareShaderProg);
+        screenSquareShaderProg = 0;
+    } else {
+        glDetachShader(screenSquareShaderProg, screenSquareVertShader);
+        glDetachShader(screenSquareShaderProg, screenSquareGeomShader);
+        glDetachShader(screenSquareShaderProg, screenSquareFragShader);
     }
 }
 
 void SimulationWidget::prepare_buffers() {
+    // Get default frame buffer since in GTK it is not always 0:
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFb);
+
     // Store Vertex array object settings:
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -93,6 +136,27 @@ void SimulationWidget::prepare_buffers() {
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(sim::Entity) * sim::MAX_ENTITIES, nullptr, GL_DYNAMIC_DRAW);
+
+    // Frame buffer:
+    glGenFramebuffers(1, &fbuf);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbuf);
+
+    // Frame buffer texture:
+    glGenTextures(1, &fbufTexture);
+    glBindTexture(GL_TEXTURE, fbufTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbufTexture, 0);
+
+    // Render buffer for depth and stencil testing:
+    glGenRenderbuffers(1, &rBuf);
+    glBindRenderbuffer(GL_RENDERBUFFER, rBuf);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rBuf);
+    assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+    glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);
 }
 
 GLuint SimulationWidget::compile_shader(const std::string& resourcePath, GLenum type) {
@@ -127,25 +191,28 @@ GLuint SimulationWidget::compile_shader(const std::string& resourcePath, GLenum 
 }
 
 void SimulationWidget::bind_attributes() {
-    GLint colAttrib = glGetAttribLocation(prog, "color");
+    // Person shader:
+    GLint colAttrib = glGetAttribLocation(personShaderProg, "color");
     glEnableVertexAttribArray(colAttrib);
     glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), nullptr);
 
-    GLint posAttrib = glGetAttribLocation(prog, "position");
+    GLint posAttrib = glGetAttribLocation(personShaderProg, "position");
     glEnableVertexAttribArray(posAttrib);
     // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
     glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), reinterpret_cast<void*>(4 * sizeof(GLfloat)));
 
-    worldSizeConst = glGetUniformLocation(prog, "worldSize");
+    worldSizeConst = glGetUniformLocation(personShaderProg, "worldSize");
     glUniform2f(worldSizeConst, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
 
-    rectSizeConst = glGetUniformLocation(prog, "rectSize");
+    rectSizeConst = glGetUniformLocation(personShaderProg, "rectSize");
     glUniform2f(rectSizeConst, 1, 1);
 
-    viewPortConst = glGetUniformLocation(prog, "viewPort");
+    viewPortConst = glGetUniformLocation(personShaderProg, "viewPort");
 
-    zoomFactorConst = glGetUniformLocation(prog, "zoomFactor");
+    zoomFactorConst = glGetUniformLocation(personShaderProg, "zoomFactor");
     glUniform1f(zoomFactorConst, 1);
+
+    // Screen quad shader:
 }
 
 const utils::TickRate& SimulationWidget::get_fps() const {
@@ -169,10 +236,6 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
     try {
         glArea.throw_if_error();
 
-        // Clear the screen:
-        glClearColor(0, 0, 0, 0);
-        glClear(GL_COLOR_BUFFER_BIT);
-
         // Update the data on the GPU:
         if (enableUiUpdates) {
             std::shared_ptr<std::vector<sim::Entity>> entities = simulator->get_entities();
@@ -182,6 +245,20 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             }
         }
         if (this->entities) {
+            // Get default frame buffer since in GTK it is not always 0:
+            glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFb);
+
+            // Draw:
+
+            // 1.0 Draw to buffer:
+            glBindFramebuffer(GL_FRAMEBUFFER, fbuf);
+            glEnable(GL_DEPTH_TEST);
+            glClearColor(0, 1, 0, 0);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            // 1.1 Blur:
+
+            // 1.2 Draw people:
             size_t size = this->entities->size();
             glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Entity) * size), static_cast<void*>(this->entities->data()), GL_DYNAMIC_DRAW);
 
@@ -191,9 +268,20 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             GLfloat viewPortMinV = (static_cast<GLfloat>(get_vadjustment()->get_value()));
             GLfloat viewPortMaxV = (static_cast<GLfloat>(get_vadjustment()->get_value() + get_height()));
             glUniform4f(viewPortConst, viewPortMinH, viewPortMaxH, viewPortMaxV, viewPortMinV);
-
-            // Draw:
+            glUseProgram(personShaderProg);
             glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(size));
+
+            // 2.0 Draw to screen:
+            glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);
+
+            // 2.1 Clear the screen:
+            glClearColor(1, 0, 0, 0);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            // 2.2 Draw texture from frame buffer:
+            glUseProgram(screenSquareShaderProg);
+            glBindTexture(GL_TEXTURE_2D, fbufTexture);
+            glDrawArrays(GL_POINTS, 0, 1);
         }
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred in the render callback of the GLArea: {} - {} - {}", gle.domain(), gle.code(), gle.what());
@@ -222,7 +310,7 @@ void SimulationWidget::on_realized() {
         glArea.throw_if_error();
         prepare_buffers();
         prepare_shader();
-        glUseProgram(prog);
+        glUseProgram(personShaderProg);
         bind_attributes();
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred making the context current during realize: {} - {} - {}", gle.domain(), gle.code(), gle.what());
@@ -234,12 +322,13 @@ void SimulationWidget::on_unrealized() {
     try {
         glArea.throw_if_error();
         // glDeleteProgram(prog);
-        glDeleteShader(vertShader);
-        glDeleteShader(geomShader);
-        glDeleteShader(fragShader);
+        glDeleteShader(personFragShader);
+        glDeleteShader(personGeomShader);
+        glDeleteShader(personFragShader);
 
         glDeleteBuffers(1, &vbo);
         glDeleteVertexArrays(1, &vao);
+        glDeleteFramebuffers(1, &fbuf);
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred deleting the context current during unrealize: {} - {} - {}", gle.domain(), gle.code(), gle.what());
     }

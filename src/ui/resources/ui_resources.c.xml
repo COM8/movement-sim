@@ -5,5 +5,8 @@
     <file>person.frag</file>
     <file>person.vert</file>
     <file>person.geom</file>
+    <file>screen_square.vert</file>
+    <file>screen_square.frag</file>
+    <file>screen_square.geom</file>
   </gresource>
 </gresources>
