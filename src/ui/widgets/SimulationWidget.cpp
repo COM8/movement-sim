@@ -160,9 +160,9 @@ void SimulationWidget::prepare_buffers() {
     GLERR;
     glBindTexture(GL_TEXTURE_2D, fbufTexture);
     GLERR;
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB8, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
     GLERR;
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     GLERR;
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbufTexture, 0);
     GLERR;
@@ -229,8 +229,6 @@ void SimulationWidget::bind_attributes() {
     rectSizeConst = glGetUniformLocation(personShaderProg, "rectSize");
     glUniform2f(rectSizeConst, 1, 1);
 
-    viewPortConst = glGetUniformLocation(personShaderProg, "viewPort");
-
     zoomFactorConst = glGetUniformLocation(personShaderProg, "zoomFactor");
     glUniform1f(zoomFactorConst, 1);
     GLERR;
@@ -275,10 +273,10 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFb);
 
             // Draw:
+            glDisable(GL_DEPTH_TEST);
 
             // 1.0 Draw to buffer:
             glBindFramebuffer(GL_FRAMEBUFFER, fbuf);
-            glEnable(GL_DEPTH_TEST);
             glClearColor(0, 0, 0, 0);
             glClear(GL_COLOR_BUFFER_BIT);
             GLERR;
@@ -290,11 +288,11 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Entity) * size), static_cast<void*>(this->entities->data()), GL_DYNAMIC_DRAW);
 
             // Update view port:
-            GLfloat viewPortMinH = static_cast<GLfloat>(get_hadjustment()->get_value());
-            GLfloat viewPortMaxH = static_cast<GLfloat>(get_hadjustment()->get_value() + get_width());
-            GLfloat viewPortMinV = (static_cast<GLfloat>(get_vadjustment()->get_value()));
-            GLfloat viewPortMaxV = (static_cast<GLfloat>(get_vadjustment()->get_value() + get_height()));
-            glUniform4f(viewPortConst, viewPortMinH, viewPortMaxH, viewPortMaxV, viewPortMinV);
+            // GLfloat viewPortMinH = static_cast<GLfloat>(get_hadjustment()->get_value());
+            // GLfloat viewPortMaxH = static_cast<GLfloat>(get_hadjustment()->get_value() + get_width());
+            // GLfloat viewPortMinV = (static_cast<GLfloat>(get_vadjustment()->get_value()));
+            // GLfloat viewPortMaxV = (static_cast<GLfloat>(get_vadjustment()->get_value() + get_height()));
+            // glUniform4f(viewPortConst, viewPortMinH, viewPortMaxH, viewPortMaxV, viewPortMinV);
             glUseProgram(personShaderProg);
             glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(size));
 
@@ -303,7 +301,7 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             GLERR;
 
             // 2.1 Clear the screen:
-            glClearColor(0, 0, 0, 0);
+            glClearColor(0, 0, 0, 1);
             glClear(GL_COLOR_BUFFER_BIT);
             GLERR;
 

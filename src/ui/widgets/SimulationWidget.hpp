@@ -29,7 +29,6 @@ class SimulationWidget : public Gtk::ScrolledWindow {
     GLuint fbufTexture{0};
     GLint worldSizeConst{0};
     GLint rectSizeConst{0};
-    GLint viewPortConst{0};
     GLint zoomFactorConst{0};
 
     GLuint personShaderProg{0};

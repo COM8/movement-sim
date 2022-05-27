@@ -1,4 +1,4 @@
-#version 330 core
+#version 400 core
 
 uniform vec2 worldSize;
 uniform vec2 rectSize;
@@ -9,9 +9,6 @@ layout(triangle_strip, max_vertices = 4) out;
 
 in vec3 gColor[];
 out vec3 fColor;
-
-in vec2 gPosition[];
-out vec2 fPosition;
 
 void build_rect(vec4 position, vec2 size) {
     size /= 2;
@@ -29,7 +26,6 @@ void build_rect(vec4 position, vec2 size) {
 void main()
 {
     fColor = gColor[0];
-    fPosition = gPosition[0];
     vec2 size = 2 * (rectSize / worldSize);
 
     // Apply zoom factor:
