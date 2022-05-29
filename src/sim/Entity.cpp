@@ -3,6 +3,13 @@
 #include <random>
 
 namespace sim {
+Entity::Entity(Rgb&& color, Vec2&& pos, Vec2&& target, Vec2&& direction, int randSeed, bool initialized) : color(color),
+                                                                                                           pos(pos),
+                                                                                                           target(target),
+                                                                                                           direction(direction),
+                                                                                                           randomSeed(randSeed),
+                                                                                                           initialized(initialized) {}
+
 int Entity::random_int() {
     static std::random_device device;
     static std::mt19937 gen(device());

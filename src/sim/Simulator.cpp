@@ -30,13 +30,12 @@ void Simulator::add_entities() {
     entities = std::make_shared<std::vector<Entity>>();
     entities->reserve(MAX_ENTITIES);
     for (size_t i = 1; i <= MAX_ENTITIES; i++) {
-        entities->push_back(Entity{
-            Rgb::random_color(),
-            Vec2::random_vec(0, WORLD_SIZE_X, 0, WORLD_SIZE_Y),
-            Vec2::random_vec(0, WORLD_SIZE_X, 0, WORLD_SIZE_Y),
-            Vec2::random_vec(-3, 3, -3, 3),
-            Entity::random_int(),
-            false});
+        entities->push_back(Entity(Rgb::random_color(),
+                                   Vec2::random_vec(0, WORLD_SIZE_X, 0, WORLD_SIZE_Y),
+                                   Vec2::random_vec(0, WORLD_SIZE_X, 0, WORLD_SIZE_Y),
+                                   {0, 0},
+                                   Entity::random_int(),
+                                   false));
     }
 }
 

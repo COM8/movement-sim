@@ -20,6 +20,8 @@ layout(push_constant) uniform PushConstants {
 
 layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
 
+precision highp float;
+
 // ------------------------------------------------------------------------------------
 // XOR-Shift
 // Source: https://www.shadertoy.com/view/tsf3Dn
@@ -27,7 +29,7 @@ layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
 int MIN = -2147483648;
 int MAX = 2147483647;
 
-int xorshift(in int value) {
+int xorshift(int value) {
     // Xorshift*32
     // Based on George Marsaglia's work: http://www.jstatsoft.org/v08/i14/paper
     value ^= value << 13;
@@ -36,24 +38,23 @@ int xorshift(in int value) {
     return value;
 }
 
-int nextInt(inout int seed) {
-    seed = xorshift(seed);
-    return seed;
+int nextInt(int seed) {
+    return xorshift(seed);
 }
 
-float nextFloat(inout int seed) {
+float nextFloat(int seed) {
     seed = xorshift(seed);
     // FIXME: This should have been a seed mapped from MIN..MAX to 0..1 instead
     return abs(fract(float(seed) / 3141.592653));
 }
 
-float nextFloat(inout int seed, in float max) {
-    return nextFloat(seed) * max;
+float nextFloat(int seed, float maxValue) {
+    return nextFloat(seed) * maxValue;
 }
 
-precision lowp float;
-
 // ------------------------------------------------------------------------------------
+
+float SPEED = 1.4;
 
 bool check_collision(uint index) {
     bool collision = false;
@@ -91,16 +92,20 @@ void new_target(uint index) {
 }
 
 void update_direction(uint index) {
-    vec2 dirNew = entities[index].target - entities[index].pos;
-    dirNew *= 1.4 / length(dirNew);
-    entities[index].direction = dirNew;
+    vec2 dist = entities[index].target - entities[index].pos;
+    float len = length(dist);
+    if(len == 0) {
+        entities[index].direction = vec2(0);
+        return;
+    }
+    vec2 normVec = dist / vec2(len);
+    entities[index].direction = normVec * SPEED;
 }
 
 void move(uint index) {
     float dist = distance(entities[index].pos, entities[index].target);
-    float speed = length(entities[index].direction);
 
-    if(dist > speed) {
+    if(dist > SPEED) {
         entities[index].pos += entities[index].direction;
     }
     else {
@@ -124,14 +129,13 @@ void main() {
     uint index = gl_GlobalInvocationID.x;
 
     if(!entities[index].initialized) {
-        new_target(index);
-        update_direction(index);
         entities[index].initialized = true;
+        new_target(index);
     }
 
+    update_direction(index);
     move(index);
     if(check_collision(index)) {
         // set_random_color(index);
     }
-    update_direction(index);
 }

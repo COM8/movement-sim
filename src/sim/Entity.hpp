@@ -23,6 +23,8 @@ struct Entity {
     int randomSeed = {0};
     bool initialized{false};
 
+    Entity(Rgb&& color, Vec2&& pos, Vec2&& target, Vec2&& direction, int randSeed, bool initialized);
+
     static int random_int();
 } __attribute__((aligned(64))) __attribute__((__packed__));
 }  // namespace sim

@@ -178,6 +178,7 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             std::shared_ptr<std::vector<sim::Entity>> entities = simulator->get_entities();
             if (entities) {
                 this->entities = entities;
+                SPDLOG_TRACE("Pos: {}/{} Direction: {}/{} Target: {}/{}", (*this->entities)[0].pos.x, (*this->entities)[0].pos.y, (*this->entities)[0].direction.x, (*this->entities)[0].direction.y, (*this->entities)[0].target.x, (*this->entities)[0].target.y);
             }
         }
         if (this->entities) {
