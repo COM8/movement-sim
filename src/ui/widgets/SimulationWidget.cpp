@@ -37,7 +37,6 @@ void SimulationWidget::set_zoom_factor(float zoomFactor) {
     int width = static_cast<int>(widthF);
     float heightF = static_cast<float>(sim::WORLD_SIZE_X) * this->zoomFactor;
     int height = static_cast<int>(heightF);
-    glUniform1f(zoomFactorConst, this->zoomFactor);
     glArea.set_size_request(width, height);
     glArea.queue_draw();
 }
@@ -159,6 +158,11 @@ void SimulationWidget::prepare_buffers() {
     glGenTextures(1, &fbufTexture);
     GLERR;
     glBindTexture(GL_TEXTURE_2D, fbufTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    std::array<float, 4> borderColor{0.5f, 0.5f, 0.0f, 1.0f};
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor.data());
     GLERR;
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
     GLERR;
@@ -228,14 +232,17 @@ void SimulationWidget::bind_attributes() {
 
     rectSizeConst = glGetUniformLocation(personShaderProg, "rectSize");
     glUniform2f(rectSizeConst, 1, 1);
-
-    zoomFactorConst = glGetUniformLocation(personShaderProg, "zoomFactor");
-    glUniform1f(zoomFactorConst, 1);
     GLERR;
 
     // Screen quad shader:
     glUseProgram(screenSquareShaderProg);
     glUniform1i(glGetUniformLocation(screenSquareShaderProg, "screenTexture"), 0);
+
+    textureSizeConst = glGetUniformLocation(screenSquareShaderProg, "textureSize");
+    glUniform2f(textureSizeConst, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
+
+    screenSizeConst = glGetUniformLocation(screenSquareShaderProg, "screenSize");
+    glUniform2f(screenSizeConst, static_cast<float>(glArea.get_width()), static_cast<float>(glArea.get_height()));
     GLERR;
 }
 
@@ -288,12 +295,6 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             size_t size = this->entities->size();
             glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Entity) * size), static_cast<void*>(this->entities->data()), GL_DYNAMIC_DRAW);
 
-            // Update view port:
-            // GLfloat viewPortMinH = static_cast<GLfloat>(get_hadjustment()->get_value());
-            // GLfloat viewPortMaxH = static_cast<GLfloat>(get_hadjustment()->get_value() + get_width());
-            // GLfloat viewPortMinV = (static_cast<GLfloat>(get_vadjustment()->get_value()));
-            // GLfloat viewPortMaxV = (static_cast<GLfloat>(get_vadjustment()->get_value() + get_height()));
-            // glUniform4f(viewPortConst, viewPortMinH, viewPortMaxH, viewPortMaxV, viewPortMinV);
             glUseProgram(personShaderProg);
             glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(size));
 
@@ -305,6 +306,9 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             glClearColor(0, 0, 0, 1);
             glClear(GL_COLOR_BUFFER_BIT);
             GLERR;
+
+            // 2.2 Update properties:
+            glUniform2f(screenSizeConst, static_cast<float>(glArea.get_width()), static_cast<float>(glArea.get_height()));
 
             // 2.2 Draw texture from frame buffer:
             glUseProgram(screenSquareShaderProg);
