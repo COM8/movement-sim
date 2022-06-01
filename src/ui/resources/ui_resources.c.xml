@@ -2,11 +2,11 @@
 <gresources>
   <gresource prefix="/ui/">
     <file>theme.css</file>
-    <file>person.frag</file>
-    <file>person.vert</file>
-    <file>person.geom</file>
-    <file>screen_square.vert</file>
-    <file>screen_square.frag</file>
-    <file>screen_square.geom</file>
+    <file>shader/person/person.frag</file>
+    <file>shader/person/person.vert</file>
+    <file>shader/person/person.geom</file>
+    <file>shader/screen_square/screen_square.vert</file>
+    <file>shader/screen_square/screen_square.frag</file>
+    <file>shader/screen_square/screen_square.geom</file>
   </gresource>
 </gresources>

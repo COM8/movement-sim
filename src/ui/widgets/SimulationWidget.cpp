@@ -61,11 +61,11 @@ void SimulationWidget::prepare_shader() {
     // Person shader:
 
     // Load shader:
-    personVertShader = compile_shader("/ui/person.vert", GL_VERTEX_SHADER);
+    personVertShader = compile_shader("/ui/shader/person/person.vert", GL_VERTEX_SHADER);
     assert(personVertShader > 0);
-    personGeomShader = compile_shader("/ui/person.geom", GL_GEOMETRY_SHADER);
+    personGeomShader = compile_shader("/ui/shader/person/person.geom", GL_GEOMETRY_SHADER);
     assert(personGeomShader > 0);
-    personFragShader = compile_shader("/ui/person.frag", GL_FRAGMENT_SHADER);
+    personFragShader = compile_shader("/ui/shader/person/person.frag", GL_FRAGMENT_SHADER);
     assert(personFragShader > 0);
 
     // Prepare program:
@@ -100,11 +100,11 @@ void SimulationWidget::prepare_shader() {
     // Screen quad shader:
 
     // Load shader:
-    screenSquareVertShader = compile_shader("/ui/screen_square.vert", GL_VERTEX_SHADER);
+    screenSquareVertShader = compile_shader("/ui/shader/screen_square/screen_square.vert", GL_VERTEX_SHADER);
     assert(screenSquareVertShader > 0);
-    screenSquareGeomShader = compile_shader("/ui/screen_square.geom", GL_GEOMETRY_SHADER);
+    screenSquareGeomShader = compile_shader("/ui/shader/screen_square/screen_square.geom", GL_GEOMETRY_SHADER);
     assert(screenSquareGeomShader > 0);
-    screenSquareFragShader = compile_shader("/ui/screen_square.frag", GL_FRAGMENT_SHADER);
+    screenSquareFragShader = compile_shader("/ui/shader/screen_square/screen_square.frag", GL_FRAGMENT_SHADER);
     assert(screenSquareFragShader > 0);
     GLERR;
 
