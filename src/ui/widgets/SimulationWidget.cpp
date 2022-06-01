@@ -158,7 +158,7 @@ void SimulationWidget::prepare_buffers() {
     glGenTextures(1, &fbufTexture);
     GLERR;
     glBindTexture(GL_TEXTURE_2D, fbufTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
     std::array<float, 4> borderColor{0.5f, 0.5f, 0.0f, 1.0f};
@@ -303,15 +303,13 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             GLERR;
 
             // 2.1 Clear the screen:
-            glClearColor(0, 0, 0, 1);
+            glClearColor(0, 0, 0, 0);
             glClear(GL_COLOR_BUFFER_BIT);
             GLERR;
 
-            // 2.2 Update properties:
-            glUniform2f(screenSizeConst, static_cast<float>(glArea.get_width()), static_cast<float>(glArea.get_height()));
-
             // 2.2 Draw texture from frame buffer:
             glUseProgram(screenSquareShaderProg);
+            glUniform2f(screenSizeConst, static_cast<float>(glArea.get_width()), static_cast<float>(glArea.get_height()));
             glBindTexture(GL_TEXTURE_2D, fbufTexture);
             glDrawArrays(GL_POINTS, 0, 1);
             GLERR;

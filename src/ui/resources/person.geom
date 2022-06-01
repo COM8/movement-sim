@@ -2,7 +2,6 @@
 
 uniform vec2 worldSize;
 uniform vec2 rectSize;
-uniform float zoomFactor;
 
 layout(points) in;
 layout(triangle_strip, max_vertices = 4) out;
@@ -28,7 +27,5 @@ void main()
     fColor = gColor[0];
     vec2 size = 2 * (rectSize / worldSize);
 
-    // Apply zoom factor:
-    size *= zoomFactor;
     build_rect(gl_in[0].gl_Position, size);
 }

@@ -10,8 +10,7 @@ uniform vec2 screenSize;
 
 void main()
 {
-    // vec2 correctionFactor = textureSize / screenSize;
-    // outColor = texture(screenTexture, fTexCoordinates * correctionFactor);
-    outColor = texture(screenTexture, fTexCoordinates);
+    vec2 correctionFactor = screenSize / textureSize;
+    outColor = texture(screenTexture, fTexCoordinates * correctionFactor);
     return;
 }
