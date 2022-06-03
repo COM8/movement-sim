@@ -54,9 +54,16 @@ std::shared_ptr<std::vector<Entity>> Simulator::get_entities() {
     return result;
 }
 
+const std::shared_ptr<Map> Simulator::get_map() const {
+    return map;
+}
+
 void Simulator::start_worker() {
     assert(state == SimulatorState::STOPPED);
     assert(!simThread);
+
+    // Load map:
+    map = Map::load_from_file("/home/fabian/Documents/Repos/movement-sim/munich.json");
 
     SPDLOG_INFO("Starting simulation thread...");
     state = SimulatorState::RUNNING;

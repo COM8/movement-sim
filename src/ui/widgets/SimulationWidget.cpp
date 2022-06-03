@@ -1,6 +1,7 @@
 #include "SimulationWidget.hpp"
 #include "logger/Logger.hpp"
 #include "sim/Entity.hpp"
+#include "sim/Map.hpp"
 #include "sim/Simulator.hpp"
 #include "spdlog/fmt/bundled/core.h"
 #include "spdlog/spdlog.h"
@@ -94,6 +95,45 @@ void SimulationWidget::prepare_shader() {
         glDetachShader(personShaderProg, personFragShader);
         glDetachShader(personShaderProg, personVertShader);
         glDetachShader(personShaderProg, personGeomShader);
+    }
+    GLERR;
+
+    // Map shader:
+
+    // Load shader:
+    mapVertShader = compile_shader("/ui/shader/map/map.vert", GL_VERTEX_SHADER);
+    assert(mapVertShader > 0);
+    mapGeomShader = compile_shader("/ui/shader/map/map.geom", GL_GEOMETRY_SHADER);
+    assert(mapGeomShader > 0);
+    mapFragShader = compile_shader("/ui/shader/map/map.frag", GL_FRAGMENT_SHADER);
+    assert(mapFragShader > 0);
+
+    // Prepare program:
+    mapShaderProg = glCreateProgram();
+    glAttachShader(mapShaderProg, mapVertShader);
+    glAttachShader(mapShaderProg, mapGeomShader);
+    glAttachShader(mapShaderProg, mapFragShader);
+    glBindFragDataLocation(mapShaderProg, 0, "outColor");
+    glLinkProgram(mapShaderProg);
+    GLERR;
+
+    // Check for errors during linking:
+    status = GL_FALSE;
+    glGetProgramiv(mapShaderProg, GL_LINK_STATUS, &status);
+    if (status == GL_FALSE) {
+        int log_len = 0;
+        glGetProgramiv(mapShaderProg, GL_INFO_LOG_LENGTH, &log_len);
+
+        std::string log_msg;
+        log_msg.resize(log_len);
+        glGetProgramInfoLog(mapShaderProg, log_len, nullptr, static_cast<GLchar*>(log_msg.data()));
+        SPDLOG_ERROR("Linking map shader program failed: {}", log_msg);
+        glDeleteProgram(mapShaderProg);
+        mapShaderProg = 0;
+    } else {
+        glDetachShader(mapShaderProg, mapFragShader);
+        glDetachShader(mapShaderProg, mapVertShader);
+        glDetachShader(mapShaderProg, mapGeomShader);
     }
     GLERR;
 
@@ -234,6 +274,25 @@ void SimulationWidget::bind_attributes() {
     glUniform2f(rectSizeConst, 1, 1);
     GLERR;
 
+    // Map shader:
+    assert(simulator);
+    const std::shared_ptr<sim::Map> map = simulator->get_map();
+    assert(map);
+
+    glUseProgram(mapShaderProg);
+    GLint startLineAttrib = glGetAttribLocation(mapShaderProg, "startPos");
+    glEnableVertexAttribArray(startLineAttrib);
+    // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
+    glVertexAttribPointer(startLineAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::LineCompact), nullptr);
+
+    GLint endLineAttrib = glGetAttribLocation(mapShaderProg, "endPos");
+    glEnableVertexAttribArray(endLineAttrib);
+    // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
+    glVertexAttribPointer(endLineAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::LineCompact), reinterpret_cast<void*>(2 * sizeof(GLfloat)));
+
+    size_t size = map->linesCompact.size();
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::LineCompact) * size), static_cast<void*>(map->linesCompact.data()), GL_STATIC_DRAW);
+
     // Screen quad shader:
     glUseProgram(screenSquareShaderProg);
     glUniform1i(glGetUniformLocation(screenSquareShaderProg, "screenTexture"), 0);
@@ -256,6 +315,9 @@ const utils::TickDurationHistory& SimulationWidget::get_fps_history() const {
 
 float SimulationWidget::get_zoom_factor() const {
     return zoomFactor;
+}
+
+void SimulationWidget::load_map() {
 }
 
 //-----------------------------Events:-----------------------------
@@ -291,12 +353,16 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
 
             // 1.1 Blur:
 
-            // 1.2 Draw people:
-            size_t size = this->entities->size();
-            glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Entity) * size), static_cast<void*>(this->entities->data()), GL_DYNAMIC_DRAW);
+            // 1.2 Draw map:
+            glUseProgram(mapShaderProg);
+            glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(simulator->get_map()->linesCompact.size()));
 
-            glUseProgram(personShaderProg);
-            glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(size));
+            // 1.3 Draw people:
+            // size_t size = this->entities->size();
+            // glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Entity) * size), static_cast<void*>(this->entities->data()), GL_DYNAMIC_DRAW);
+            //
+            // glUseProgram(personShaderProg);
+            // glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(size));
 
             // 2.0 Draw to screen:
             glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);

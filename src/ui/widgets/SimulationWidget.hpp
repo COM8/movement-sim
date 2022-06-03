@@ -37,6 +37,11 @@ class SimulationWidget : public Gtk::ScrolledWindow {
     GLuint personGeomShader{0};
     GLuint personFragShader{0};
 
+    GLuint mapShaderProg{0};
+    GLuint mapVertShader{0};
+    GLuint mapGeomShader{0};
+    GLuint mapFragShader{0};
+
     GLuint screenSquareShaderProg{0};
     GLuint screenSquareVertShader{0};
     GLuint screenSquareGeomShader{0};
@@ -62,6 +67,7 @@ class SimulationWidget : public Gtk::ScrolledWindow {
     void prepare_shader();
     void prepare_buffers();
     void bind_attributes();
+    void load_map();
 
     //-----------------------------Events:-----------------------------
     bool on_render_handler(const Glib::RefPtr<Gdk::GLContext>& ctx);

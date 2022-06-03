@@ -11,6 +11,7 @@
 #include <kompute/Manager.hpp>
 #include <memory>
 #include <mutex>
+#include <sim/Map.hpp>
 #include <thread>
 #include <type_traits>
 #include <vector>
@@ -48,6 +49,8 @@ class Simulator {
     std::shared_ptr<kp::TensorT<float>> tensorEntityVertices{nullptr};
     std::shared_ptr<kp::TensorT<float>> tensorEntityVerticElements{nullptr};
 
+    std::shared_ptr<Map> map{nullptr};
+
  public:
     Simulator();
     ~Simulator() = default;
@@ -68,6 +71,7 @@ class Simulator {
     [[nodiscard]] const utils::TickRate& get_tps() const;
     [[nodiscard]] const utils::TickDurationHistory& get_tps_history() const;
     std::shared_ptr<std::vector<Entity>> get_entities();
+    [[nodiscard]] const std::shared_ptr<Map> get_map() const;
 
  private:
     void sim_worker();
