@@ -10,5 +10,4 @@ set(RESOURCE_DEPS ${CMAKE_CURRENT_SOURCE_DIR}/theme.css
                   ${CMAKE_CURRENT_SOURCE_DIR}/shader/screen_square/screen_square.vert
                   ${CMAKE_CURRENT_SOURCE_DIR}/shader/screen_square/screen_square.geom
                   ${CMAKE_CURRENT_SOURCE_DIR}/shader/map/map.frag
-                  ${CMAKE_CURRENT_SOURCE_DIR}/shader/map/map.vert
-                  ${CMAKE_CURRENT_SOURCE_DIR}/shader/map/map.geom PARENT_SCOPE)
+                  ${CMAKE_CURRENT_SOURCE_DIR}/shader/map/map.vert PARENT_SCOPE)

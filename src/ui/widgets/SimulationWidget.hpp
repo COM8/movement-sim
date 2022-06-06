@@ -39,8 +39,8 @@ class SimulationWidget : public Gtk::ScrolledWindow {
 
     GLuint mapShaderProg{0};
     GLuint mapVertShader{0};
-    GLuint mapGeomShader{0};
     GLuint mapFragShader{0};
+    GLuint mapVbo{0};
 
     GLuint screenSquareShaderProg{0};
     GLuint screenSquareVertShader{0};

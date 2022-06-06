@@ -10,6 +10,5 @@
     <file>shader/screen_square/screen_square.geom</file>
     <file>shader/map/map.vert</file>
     <file>shader/map/map.frag</file>
-    <file>shader/map/map.geom</file>
   </gresource>
 </gresources>

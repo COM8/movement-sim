@@ -103,15 +103,12 @@ void SimulationWidget::prepare_shader() {
     // Load shader:
     mapVertShader = compile_shader("/ui/shader/map/map.vert", GL_VERTEX_SHADER);
     assert(mapVertShader > 0);
-    mapGeomShader = compile_shader("/ui/shader/map/map.geom", GL_GEOMETRY_SHADER);
-    assert(mapGeomShader > 0);
     mapFragShader = compile_shader("/ui/shader/map/map.frag", GL_FRAGMENT_SHADER);
     assert(mapFragShader > 0);
 
     // Prepare program:
     mapShaderProg = glCreateProgram();
     glAttachShader(mapShaderProg, mapVertShader);
-    glAttachShader(mapShaderProg, mapGeomShader);
     glAttachShader(mapShaderProg, mapFragShader);
     glBindFragDataLocation(mapShaderProg, 0, "outColor");
     glLinkProgram(mapShaderProg);
@@ -133,7 +130,6 @@ void SimulationWidget::prepare_shader() {
     } else {
         glDetachShader(mapShaderProg, mapFragShader);
         glDetachShader(mapShaderProg, mapVertShader);
-        glDetachShader(mapShaderProg, mapGeomShader);
     }
     GLERR;
 
@@ -185,10 +181,19 @@ void SimulationWidget::prepare_buffers() {
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
-    // Vertex buffer:
+    // Vertex buffer for entities:
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(sim::Entity) * sim::MAX_ENTITIES, nullptr, GL_DYNAMIC_DRAW);
+
+    // Vertex buffer for the map:
+    assert(simulator);
+    const std::shared_ptr<sim::Map> map = simulator->get_map();
+    assert(map);
+
+    glGenBuffers(1, &mapVbo);
+    glBindBuffer(GL_ARRAY_BUFFER, mapVbo);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::LineCompact) * map->linesCompact.size()), map->linesCompact.data(), GL_STATIC_DRAW);
 
     // Frame buffer:
     glGenFramebuffers(1, &fbuf);
@@ -280,18 +285,13 @@ void SimulationWidget::bind_attributes() {
     assert(map);
 
     glUseProgram(mapShaderProg);
+    GLint mapPosAttrib = glGetAttribLocation(mapShaderProg, "position");
+    glEnableVertexAttribArray(mapPosAttrib);
+    // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
+    glVertexAttribPointer(mapPosAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::LineCompact), nullptr);
+
     worldSizeConst = glGetUniformLocation(mapShaderProg, "worldSize");
-    glUniform2f(worldSizeConst, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
-
-    GLint startLineAttrib = glGetAttribLocation(mapShaderProg, "startPos");
-    glEnableVertexAttribArray(startLineAttrib);
-    // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
-    glVertexAttribPointer(startLineAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::LineCompact), nullptr);
-
-    GLint endLineAttrib = glGetAttribLocation(mapShaderProg, "endPos");
-    glEnableVertexAttribArray(endLineAttrib);
-    // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
-    glVertexAttribPointer(endLineAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::LineCompact), reinterpret_cast<void*>(2 * sizeof(GLfloat)));
+    glUniform2f(worldSizeConst, map->width, map->height);
 
     size_t size = map->linesCompact.size();
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::LineCompact) * size), static_cast<void*>(map->linesCompact.data()), GL_STATIC_DRAW);
@@ -358,7 +358,8 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
 
             // 1.2 Draw map:
             glUseProgram(mapShaderProg);
-            glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(simulator->get_map()->linesCompact.size()));
+            glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(simulator->get_map()->linesCompact.size()));
+            GLERR;
 
             // 1.3 Draw people:
             // size_t size = this->entities->size();

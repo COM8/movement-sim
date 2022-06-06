@@ -2,16 +2,9 @@
 
 uniform vec2 worldSize;
 
-in vec2 startPos;
-in vec2 endPos;
+in vec2 position;
 
-out vec2 gStartPos;
-out vec2 gEndPos;
-
-void main()
-{
+void main(void) {
     // Normalize to range [-1, 1]:
-    gStartPos = startPos / worldSize;
-    gEndPos = endPos / worldSize;
-    gl_Position = vec4(gStartPos, 0.0, 1.0);
+    gl_Position = vec4(position / worldSize, 0.0, 1.0);
 }
