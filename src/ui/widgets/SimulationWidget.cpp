@@ -280,6 +280,9 @@ void SimulationWidget::bind_attributes() {
     assert(map);
 
     glUseProgram(mapShaderProg);
+    worldSizeConst = glGetUniformLocation(mapShaderProg, "worldSize");
+    glUniform2f(worldSizeConst, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
+
     GLint startLineAttrib = glGetAttribLocation(mapShaderProg, "startPos");
     glEnableVertexAttribArray(startLineAttrib);
     // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
