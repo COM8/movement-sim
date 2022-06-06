@@ -2,7 +2,7 @@
 
 uniform vec2 worldSize;
 
-in vec2 position;
+layout(location = 0) in vec2 position;
 
 void main(void) {
     // Normalize to range [-1, 1]:

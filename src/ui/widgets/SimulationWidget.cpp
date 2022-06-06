@@ -17,15 +17,6 @@
 #include <glibconfig.h>
 #include <gtkmm/gesturezoom.h>
 
-// Error codes: https://www.khronos.org/opengl/wiki/OpenGL_Error
-#define GLERR                                             \
-    {                                                     \
-        GLuint glErr;                                     \
-        while ((glErr = glGetError()) != GL_NO_ERROR) {   \
-            SPDLOG_ERROR("glGetError() = 0x{:X}", glErr); \
-        }                                                 \
-    }
-
 namespace ui::widgets {
 SimulationWidget::SimulationWidget() : simulator(sim::Simulator::get_instance()) {
     prep_widget();
@@ -40,10 +31,10 @@ void SimulationWidget::set_zoom_factor(float zoomFactor) {
 
     this->zoomFactor = zoomFactor;
     // float widthF = static_cast<float>(map->widthPowerTwo) * this->zoomFactor;
-    float widthF = static_cast<float>(MAX_RENDER_RESOLUTION_X) * this->zoomFactor;
+    float widthF = static_cast<float>(sim::MAX_RENDER_RESOLUTION_X) * this->zoomFactor;
     int width = static_cast<int>(widthF);
     // float heightF = static_cast<float>(map->heightPowerTwo) * this->zoomFactor;
-    float heightF = static_cast<float>(MAX_RENDER_RESOLUTION_Y) * this->zoomFactor;
+    float heightF = static_cast<float>(sim::MAX_RENDER_RESOLUTION_Y) * this->zoomFactor;
     int height = static_cast<int>(heightF);
     glArea.set_size_request(width, height);
     glArea.queue_draw();
@@ -66,146 +57,14 @@ void SimulationWidget::prep_widget() {
 
     glArea.set_auto_render();
     // glArea.set_size_request(static_cast<int>(map->widthPowerTwo), static_cast<int>(map->heightPowerTwo));
-    glArea.set_size_request(MAX_RENDER_RESOLUTION_X, MAX_RENDER_RESOLUTION_Y);
+    glArea.set_size_request(sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y);
     set_child(glArea);
-}
-
-void SimulationWidget::prepare_shader() {
-    // Person shader:
-
-    // Load shader:
-    personVertShader = compile_shader("/ui/shader/person/person.vert", GL_VERTEX_SHADER);
-    assert(personVertShader > 0);
-    personGeomShader = compile_shader("/ui/shader/person/person.geom", GL_GEOMETRY_SHADER);
-    assert(personGeomShader > 0);
-    personFragShader = compile_shader("/ui/shader/person/person.frag", GL_FRAGMENT_SHADER);
-    assert(personFragShader > 0);
-
-    // Prepare program:
-    personShaderProg = glCreateProgram();
-    glAttachShader(personShaderProg, personVertShader);
-    glAttachShader(personShaderProg, personGeomShader);
-    glAttachShader(personShaderProg, personFragShader);
-    glBindFragDataLocation(personShaderProg, 0, "outColor");
-    glLinkProgram(personShaderProg);
-    GLERR;
-
-    // Check for errors during linking:
-    GLint status = GL_FALSE;
-    glGetProgramiv(personShaderProg, GL_LINK_STATUS, &status);
-    if (status == GL_FALSE) {
-        int log_len = 0;
-        glGetProgramiv(personShaderProg, GL_INFO_LOG_LENGTH, &log_len);
-
-        std::string log_msg;
-        log_msg.resize(log_len);
-        glGetProgramInfoLog(personShaderProg, log_len, nullptr, static_cast<GLchar*>(log_msg.data()));
-        SPDLOG_ERROR("Linking person shader program failed: {}", log_msg);
-        glDeleteProgram(personShaderProg);
-        personShaderProg = 0;
-    } else {
-        glDetachShader(personShaderProg, personFragShader);
-        glDetachShader(personShaderProg, personVertShader);
-        glDetachShader(personShaderProg, personGeomShader);
-    }
-    GLERR;
-
-    // Map shader:
-
-    // Load shader:
-    mapVertShader = compile_shader("/ui/shader/map/map.vert", GL_VERTEX_SHADER);
-    assert(mapVertShader > 0);
-    mapFragShader = compile_shader("/ui/shader/map/map.frag", GL_FRAGMENT_SHADER);
-    assert(mapFragShader > 0);
-
-    // Prepare program:
-    mapShaderProg = glCreateProgram();
-    glAttachShader(mapShaderProg, mapVertShader);
-    glAttachShader(mapShaderProg, mapFragShader);
-    glBindFragDataLocation(mapShaderProg, 0, "outColor");
-    glLinkProgram(mapShaderProg);
-    GLERR;
-
-    // Check for errors during linking:
-    status = GL_FALSE;
-    glGetProgramiv(mapShaderProg, GL_LINK_STATUS, &status);
-    if (status == GL_FALSE) {
-        int log_len = 0;
-        glGetProgramiv(mapShaderProg, GL_INFO_LOG_LENGTH, &log_len);
-
-        std::string log_msg;
-        log_msg.resize(log_len);
-        glGetProgramInfoLog(mapShaderProg, log_len, nullptr, static_cast<GLchar*>(log_msg.data()));
-        SPDLOG_ERROR("Linking map shader program failed: {}", log_msg);
-        glDeleteProgram(mapShaderProg);
-        mapShaderProg = 0;
-    } else {
-        glDetachShader(mapShaderProg, mapFragShader);
-        glDetachShader(mapShaderProg, mapVertShader);
-    }
-    GLERR;
-
-    // Screen quad shader:
-
-    // Load shader:
-    screenSquareVertShader = compile_shader("/ui/shader/screen_square/screen_square.vert", GL_VERTEX_SHADER);
-    assert(screenSquareVertShader > 0);
-    screenSquareGeomShader = compile_shader("/ui/shader/screen_square/screen_square.geom", GL_GEOMETRY_SHADER);
-    assert(screenSquareGeomShader > 0);
-    screenSquareFragShader = compile_shader("/ui/shader/screen_square/screen_square.frag", GL_FRAGMENT_SHADER);
-    assert(screenSquareFragShader > 0);
-    GLERR;
-
-    // Prepare program:
-    screenSquareShaderProg = glCreateProgram();
-    glAttachShader(screenSquareShaderProg, screenSquareVertShader);
-    glAttachShader(screenSquareShaderProg, screenSquareGeomShader);
-    glAttachShader(screenSquareShaderProg, screenSquareFragShader);
-    glLinkProgram(screenSquareShaderProg);
-    GLERR;
-
-    // Check for errors during linking:
-    status = GL_FALSE;
-    glGetProgramiv(screenSquareShaderProg, GL_LINK_STATUS, &status);
-    if (status == GL_FALSE) {
-        int log_len = 0;
-        glGetProgramiv(screenSquareShaderProg, GL_INFO_LOG_LENGTH, &log_len);
-
-        std::string log_msg;
-        log_msg.resize(log_len);
-        glGetProgramInfoLog(screenSquareShaderProg, log_len, nullptr, static_cast<GLchar*>(log_msg.data()));
-        SPDLOG_ERROR("Linking screen square shader program failed: {}", log_msg);
-        glDeleteProgram(screenSquareShaderProg);
-        screenSquareShaderProg = 0;
-    } else {
-        glDetachShader(screenSquareShaderProg, screenSquareVertShader);
-        glDetachShader(screenSquareShaderProg, screenSquareGeomShader);
-        glDetachShader(screenSquareShaderProg, screenSquareFragShader);
-    }
-    GLERR;
+    screenSquareObj.set_glArea(&glArea);
 }
 
 void SimulationWidget::prepare_buffers() {
     // Get default frame buffer since in GTK it is not always 0:
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFb);
-
-    // Store Vertex array object settings:
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    // Vertex buffer for entities:
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(sim::Entity) * sim::MAX_ENTITIES, nullptr, GL_DYNAMIC_DRAW);
-
-    // Vertex buffer for the map:
-    assert(simulator);
-    const std::shared_ptr<sim::Map> map = simulator->get_map();
-    assert(map);
-
-    glGenBuffers(1, &mapVbo);
-    glBindBuffer(GL_ARRAY_BUFFER, mapVbo);
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::LineCompact) * map->linesCompact.size()), map->linesCompact.data(), GL_STATIC_DRAW);
 
     // Frame buffer:
     glGenFramebuffers(1, &fbuf);
@@ -221,9 +80,9 @@ void SimulationWidget::prepare_buffers() {
     std::array<float, 4> borderColor{0.5F, 0.5F, 0.0F, 1.0F};
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor.data());
     GLERR;
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16, MAX_RENDER_RESOLUTION_X, MAX_RENDER_RESOLUTION_Y);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16, sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y);
     GLERR;
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MAX_RENDER_RESOLUTION_X, MAX_RENDER_RESOLUTION_Y, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     GLERR;
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbufTexture, 0);
     GLERR;
@@ -231,93 +90,13 @@ void SimulationWidget::prepare_buffers() {
     // Render buffer for depth and stencil testing:
     glGenRenderbuffers(1, &rBuf);
     glBindRenderbuffer(GL_RENDERBUFFER, rBuf);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, MAX_RENDER_RESOLUTION_X, MAX_RENDER_RESOLUTION_Y);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rBuf);
     assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
     GLERR;
 
     glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);
-}
-
-GLuint SimulationWidget::compile_shader(const std::string& resourcePath, GLenum type) {
-    // Load shader:
-    const Glib::RefPtr<const Glib::Bytes> shaderbytes = Gio::Resource::lookup_data_global(resourcePath);
-    assert(shaderbytes);
-    gsize shaderSize = shaderbytes->get_size();
-    const char* shaderData = static_cast<const char*>(shaderbytes->get_data(shaderSize));
-
-    // Compile:
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &shaderData, nullptr);
-    glCompileShader(shader);
-
-    // Check for errors during compiling:
-    GLint status = GL_FALSE;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-    if (status == GL_FALSE) {
-        int log_len = 0;
-        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_len);
-
-        std::string log_msg;
-        log_msg.resize(log_len);
-        glGetShaderInfoLog(shader, log_len, nullptr, static_cast<GLchar*>(log_msg.data()));
-
-        SPDLOG_ERROR("Compiling shader '{}' failed with: {}", resourcePath, log_msg);
-        glDeleteShader(shader);
-        return -1;
-    }
-    GLERR;
-    SPDLOG_DEBUG("Compiling shader '{}' was successful.", resourcePath);
-    return shader;
-}
-
-void SimulationWidget::bind_attributes() {
-    // Map shader:
-    assert(simulator);
-    const std::shared_ptr<sim::Map> map = simulator->get_map();
-    assert(map);
-
-    glUseProgram(mapShaderProg);
-    GLint mapPosAttrib = glGetAttribLocation(mapShaderProg, "position");
-    glEnableVertexAttribArray(mapPosAttrib);
-    // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
-    glVertexAttribPointer(mapPosAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::LineCompact), nullptr);
-
-    worldSizeConst = glGetUniformLocation(mapShaderProg, "worldSize");
-    glUniform2f(worldSizeConst, map->width, map->height);
-
-    size_t size = map->linesCompact.size();
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::LineCompact) * size), static_cast<void*>(map->linesCompact.data()), GL_STATIC_DRAW);
-
-    // Person shader:
-    glUseProgram(personShaderProg);
-    GLint colAttrib = glGetAttribLocation(personShaderProg, "color");
-    glEnableVertexAttribArray(colAttrib);
-    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), nullptr);
-
-    GLint posAttrib = glGetAttribLocation(personShaderProg, "position");
-    glEnableVertexAttribArray(posAttrib);
-    // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
-    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), reinterpret_cast<void*>(4 * sizeof(GLfloat)));
-
-    worldSizeConst = glGetUniformLocation(personShaderProg, "worldSize");
-    glUniform2f(worldSizeConst, map->width, map->height);
-
-    rectSizeConst = glGetUniformLocation(personShaderProg, "rectSize");
-    glUniform2f(rectSizeConst, 1, 1);
-    GLERR;
-
-    // Screen quad shader:
-    glUseProgram(screenSquareShaderProg);
-    glUniform1i(glGetUniformLocation(screenSquareShaderProg, "screenTexture"), 0);
-
-    textureSizeConst = glGetUniformLocation(screenSquareShaderProg, "textureSize");
-    glUniform2f(textureSizeConst, MAX_RENDER_RESOLUTION_X, MAX_RENDER_RESOLUTION_Y);
-
-    screenSizeConst = glGetUniformLocation(screenSquareShaderProg, "screenSize");
-    glUniform2f(screenSizeConst, static_cast<float>(glArea.get_width()), static_cast<float>(glArea.get_height()));
-    GLERR;
 }
 
 const utils::TickRate& SimulationWidget::get_fps() const {
@@ -345,18 +124,21 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
         glArea.throw_if_error();
 
         // Update the data on the GPU:
+        bool entitiesChanged = false;
         if (enableUiUpdates) {
             std::shared_ptr<std::vector<sim::Entity>> entities = simulator->get_entities();
             if (entities) {
-                this->entities = entities;
+                entitiesChanged = true;
+                this->entities = std::move(entities);
                 const sim::Entity& e = (*this->entities)[0];
                 SPDLOG_TRACE("Pos: {}/{} Direction: {}/{} Target: {}/{}", e.pos.x, e.pos.y, e.direction.x, e.direction.y, e.target.x, e.target.y);
             }
         }
-        if (this->entities) {
-            // Get default frame buffer since in GTK it is not always 0:
-            glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFb);
 
+        // Get default frame buffer since in GTK it is not always 0:
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFb);
+
+        if (entitiesChanged) {
             // Draw:
             glDisable(GL_DEPTH_TEST);
 
@@ -369,33 +151,24 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             // 1.1 Blur:
 
             // 1.2 Draw map:
-            glUseProgram(mapShaderProg);
-            glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(simulator->get_map()->linesCompact.size()));
-            GLERR;
+            mapObj.render();
 
             // 1.3 Draw people:
-            // size_t size = this->entities->size();
-            // glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Entity) * size), static_cast<void*>(this->entities->data()), GL_DYNAMIC_DRAW);
-            //
-            // glUseProgram(personShaderProg);
-            // glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(size));
-
-            // 2.0 Draw to screen:
-            glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);
-            GLERR;
-
-            // 2.1 Clear the screen:
-            glClearColor(0, 0, 0, 0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            GLERR;
-
-            // 2.2 Draw texture from frame buffer:
-            glUseProgram(screenSquareShaderProg);
-            glUniform2f(screenSizeConst, static_cast<float>(glArea.get_width()), static_cast<float>(glArea.get_height()));
-            glBindTexture(GL_TEXTURE_2D, fbufTexture);
-            glDrawArrays(GL_POINTS, 0, 1);
-            GLERR;
+            entityObj.set_entities(this->entities);
+            entityObj.render();
         }
+
+        // 2.0 Draw to screen:
+        glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);
+        GLERR;
+
+        // 2.1 Clear the screen:
+        glClearColor(0, 0, 0, 0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        GLERR;
+
+        // 2.2 Draw texture from frame buffer:
+        screenSquareObj.render();
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred in the render callback of the GLArea: {} - {} - {}", gle.domain(), gle.code(), gle.what());
     }
@@ -422,9 +195,11 @@ void SimulationWidget::on_realized() {
     try {
         glArea.throw_if_error();
         prepare_buffers();
-        prepare_shader();
-        glUseProgram(personShaderProg);
-        bind_attributes();
+
+        mapObj.init();
+        entityObj.init();
+        screenSquareObj.set_fb_texture(fbufTexture);
+        screenSquareObj.init();
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred making the context current during realize: {} - {} - {}", gle.domain(), gle.code(), gle.what());
     }
@@ -434,13 +209,11 @@ void SimulationWidget::on_unrealized() {
     glArea.make_current();
     try {
         glArea.throw_if_error();
-        // glDeleteProgram(prog);
-        glDeleteShader(personFragShader);
-        glDeleteShader(personGeomShader);
-        glDeleteShader(personFragShader);
 
-        glDeleteBuffers(1, &vbo);
-        glDeleteVertexArrays(1, &vao);
+        mapObj.cleanup();
+        entityObj.cleanup();
+        screenSquareObj.cleanup();
+
         glDeleteFramebuffers(1, &fbuf);
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred deleting the context current during unrealize: {} - {} - {}", gle.domain(), gle.code(), gle.what());
