@@ -3,6 +3,7 @@
 #include "sim/Entity.hpp"
 #include "spdlog/spdlog.h"
 #include <cassert>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -13,6 +14,8 @@ Coordinate::Coordinate(Vec2 pos) : pos(pos) {}
 
 Map::Map(float width, float height, std::vector<Line>&& lines, std::vector<LineCompact>&& linesCompact) : width(width),
                                                                                                           height(height),
+                                                                                                          widthPowerTwo(static_cast<size_t>(std::pow(2, std::ceil(std::log(width) / std::log(2))))),
+                                                                                                          heightPowerTwo(static_cast<size_t>(std::pow(2, std::ceil(std::log(height) / std::log(2))))),
                                                                                                           lines(std::move(lines)),
                                                                                                           linesCompact(std::move(linesCompact)) {}
 
@@ -30,38 +33,61 @@ std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
     }
     nlohmann::json json = nlohmann::json::parse(file);
 
-    if (!json.contains("maxLat")) {
-        throw std::runtime_error("Failed to parse corrections. 'maxLat' field missing.");
+    if (!json.contains("maxDistLat")) {
+        throw std::runtime_error("Failed to parse map. 'maxDistLat' field missing.");
     }
     float width = 0;
-    json.at("maxLat").get_to(width);
+    json.at("maxDistLat").get_to(width);
 
-    if (!json.contains("maxLong")) {
-        throw std::runtime_error("Failed to parse corrections. 'maxLong' field missing.");
+    if (!json.contains("maxDistLong")) {
+        throw std::runtime_error("Failed to parse map. 'maxDistLong' field missing.");
     }
     float height = 0;
-    json.at("maxLong").get_to(height);
+    json.at("maxDistLong").get_to(height);
 
     std::vector<Line> lines;
     std::vector<LineCompact> linesCompact;
 
-    if (!json.contains("points")) {
-        throw std::runtime_error("Failed to parse corrections. 'points' field missing.");
+    if (!json.contains("roads")) {
+        throw std::runtime_error("Failed to parse map. 'roads' field missing.");
     }
-    nlohmann::json::array_t linesArray;
-    json.at("points").get_to(linesArray);
-    for (const nlohmann::json& jLine : linesArray) {
-        nlohmann::json::array_t pointsArray = jLine;
-        assert(pointsArray.size() == 2);
-        nlohmann::json::array_t startArray = pointsArray[0];
-        nlohmann::json::array_t endArray = pointsArray[1];
+    nlohmann::json::array_t roadsArray;
+    json.at("roads").get_to(roadsArray);
+    for (const nlohmann::json& jRoad : roadsArray) {
+        if (!jRoad.contains("start")) {
+            throw std::runtime_error("Failed to parse map. 'start' field missing.");
+        }
+        nlohmann::json jStart = jRoad["start"];
+        if (!jStart.contains("distLat")) {
+            throw std::runtime_error("Failed to parse map. 'distLat' field missing.");
+        }
+        float latStart = 0;
+        jStart.at("distLat").get_to(latStart);
 
-        float xStart = startArray[0];
-        float yStart = startArray[1];
-        Vec2 start{xStart, yStart};
-        float xEnd = endArray[0];
-        float yEnd = endArray[1];
-        Vec2 end{xEnd, yEnd};
+        if (!jStart.contains("distLong")) {
+            throw std::runtime_error("Failed to parse map. 'distLong' field missing.");
+        }
+        float longStart = 0;
+        jStart.at("distLong").get_to(longStart);
+
+        if (!jRoad.contains("end")) {
+            throw std::runtime_error("Failed to parse map. 'end' field missing.");
+        }
+        nlohmann::json jEnd = jRoad["end"];
+        if (!jEnd.contains("distLat")) {
+            throw std::runtime_error("Failed to parse map. 'distLat' field missing.");
+        }
+        float latEnd = 0;
+        jEnd.at("distLat").get_to(latEnd);
+
+        if (!jEnd.contains("distLong")) {
+            throw std::runtime_error("Failed to parse map. 'distLong' field missing.");
+        }
+        float longEnd = 0;
+        jEnd.at("distLong").get_to(longEnd);
+
+        Vec2 start{latStart, longStart};
+        Vec2 end{latEnd, longEnd};
         lines.emplace_back(Line{Coordinate{start}, Coordinate{end}});
         linesCompact.emplace_back(LineCompact{start, end});
     }

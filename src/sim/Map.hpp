@@ -27,6 +27,8 @@ class Map {
  public:
     float width;
     float height;
+    size_t widthPowerTwo;
+    size_t heightPowerTwo;
     std::vector<Line> lines;
     std::vector<LineCompact> linesCompact;
 
