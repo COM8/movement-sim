@@ -3,7 +3,6 @@
 #include "sim/Entity.hpp"
 #include "spdlog/spdlog.h"
 #include <cassert>
-#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -14,8 +13,6 @@ Coordinate::Coordinate(Vec2 pos) : pos(pos) {}
 
 Map::Map(float width, float height, std::vector<Line>&& lines, std::vector<LineCompact>&& linesCompact) : width(width),
                                                                                                           height(height),
-                                                                                                          widthPowerTwo(static_cast<size_t>(std::pow(2, std::ceil(std::log(width) / std::log(2))))),
-                                                                                                          heightPowerTwo(static_cast<size_t>(std::pow(2, std::ceil(std::log(height) / std::log(2))))),
                                                                                                           lines(std::move(lines)),
                                                                                                           linesCompact(std::move(linesCompact)) {}
 

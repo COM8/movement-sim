@@ -11,6 +11,9 @@
 #include <gtkmm/scrolledwindow.h>
 
 namespace ui::widgets {
+
+constexpr float MAX_RENDER_RESOLUTION_X = 8192;  // Larger values result in errors when creating frame buffers
+constexpr float MAX_RENDER_RESOLUTION_Y = 8192;
 class SimulationWidget : public Gtk::ScrolledWindow {
  private:
     std::shared_ptr<sim::Simulator> simulator{nullptr};

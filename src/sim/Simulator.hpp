@@ -24,8 +24,6 @@ enum class SimulatorState {
 };
 
 constexpr size_t MAX_ENTITIES = 1000000;
-constexpr float WORLD_SIZE_X = 8192;  // One pixel equals one meter
-constexpr float WORLD_SIZE_Y = 8192;
 
 class Simulator {
  private:

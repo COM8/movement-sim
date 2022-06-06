@@ -33,10 +33,17 @@ SimulationWidget::SimulationWidget() : simulator(sim::Simulator::get_instance())
 
 void SimulationWidget::set_zoom_factor(float zoomFactor) {
     assert(zoomFactor > 0);
+
+    assert(simulator);
+    const std::shared_ptr<sim::Map> map = simulator->get_map();
+    assert(map);
+
     this->zoomFactor = zoomFactor;
-    float widthF = static_cast<float>(sim::WORLD_SIZE_X) * this->zoomFactor;
+    // float widthF = static_cast<float>(map->widthPowerTwo) * this->zoomFactor;
+    float widthF = static_cast<float>(MAX_RENDER_RESOLUTION_X) * this->zoomFactor;
     int width = static_cast<int>(widthF);
-    float heightF = static_cast<float>(sim::WORLD_SIZE_X) * this->zoomFactor;
+    // float heightF = static_cast<float>(map->heightPowerTwo) * this->zoomFactor;
+    float heightF = static_cast<float>(MAX_RENDER_RESOLUTION_Y) * this->zoomFactor;
     int height = static_cast<int>(heightF);
     glArea.set_size_request(width, height);
     glArea.queue_draw();
@@ -53,8 +60,13 @@ void SimulationWidget::prep_widget() {
     glArea.signal_unrealize().connect(sigc::mem_fun(*this, &SimulationWidget::on_unrealized));
     glArea.add_tick_callback(sigc::mem_fun(*this, &SimulationWidget::on_tick));
 
+    assert(simulator);
+    const std::shared_ptr<sim::Map> map = simulator->get_map();
+    assert(map);
+
     glArea.set_auto_render();
-    glArea.set_size_request(sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
+    // glArea.set_size_request(static_cast<int>(map->widthPowerTwo), static_cast<int>(map->heightPowerTwo));
+    glArea.set_size_request(MAX_RENDER_RESOLUTION_X, MAX_RENDER_RESOLUTION_Y);
     set_child(glArea);
 }
 
@@ -206,12 +218,12 @@ void SimulationWidget::prepare_buffers() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    std::array<float, 4> borderColor{0.5f, 0.5f, 0.0f, 1.0f};
+    std::array<float, 4> borderColor{0.5F, 0.5F, 0.0F, 1.0F};
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor.data());
     GLERR;
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16, MAX_RENDER_RESOLUTION_X, MAX_RENDER_RESOLUTION_Y);
     GLERR;
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MAX_RENDER_RESOLUTION_X, MAX_RENDER_RESOLUTION_Y, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     GLERR;
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbufTexture, 0);
     GLERR;
@@ -219,7 +231,7 @@ void SimulationWidget::prepare_buffers() {
     // Render buffer for depth and stencil testing:
     glGenRenderbuffers(1, &rBuf);
     glBindRenderbuffer(GL_RENDERBUFFER, rBuf);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, MAX_RENDER_RESOLUTION_X, MAX_RENDER_RESOLUTION_Y);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rBuf);
     assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
@@ -261,24 +273,6 @@ GLuint SimulationWidget::compile_shader(const std::string& resourcePath, GLenum 
 }
 
 void SimulationWidget::bind_attributes() {
-    // Person shader:
-    glUseProgram(personShaderProg);
-    GLint colAttrib = glGetAttribLocation(personShaderProg, "color");
-    glEnableVertexAttribArray(colAttrib);
-    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), nullptr);
-
-    GLint posAttrib = glGetAttribLocation(personShaderProg, "position");
-    glEnableVertexAttribArray(posAttrib);
-    // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
-    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), reinterpret_cast<void*>(4 * sizeof(GLfloat)));
-
-    worldSizeConst = glGetUniformLocation(personShaderProg, "worldSize");
-    glUniform2f(worldSizeConst, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
-
-    rectSizeConst = glGetUniformLocation(personShaderProg, "rectSize");
-    glUniform2f(rectSizeConst, 1, 1);
-    GLERR;
-
     // Map shader:
     assert(simulator);
     const std::shared_ptr<sim::Map> map = simulator->get_map();
@@ -296,12 +290,30 @@ void SimulationWidget::bind_attributes() {
     size_t size = map->linesCompact.size();
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::LineCompact) * size), static_cast<void*>(map->linesCompact.data()), GL_STATIC_DRAW);
 
+    // Person shader:
+    glUseProgram(personShaderProg);
+    GLint colAttrib = glGetAttribLocation(personShaderProg, "color");
+    glEnableVertexAttribArray(colAttrib);
+    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), nullptr);
+
+    GLint posAttrib = glGetAttribLocation(personShaderProg, "position");
+    glEnableVertexAttribArray(posAttrib);
+    // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
+    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), reinterpret_cast<void*>(4 * sizeof(GLfloat)));
+
+    worldSizeConst = glGetUniformLocation(personShaderProg, "worldSize");
+    glUniform2f(worldSizeConst, map->width, map->height);
+
+    rectSizeConst = glGetUniformLocation(personShaderProg, "rectSize");
+    glUniform2f(rectSizeConst, 1, 1);
+    GLERR;
+
     // Screen quad shader:
     glUseProgram(screenSquareShaderProg);
     glUniform1i(glGetUniformLocation(screenSquareShaderProg, "screenTexture"), 0);
 
     textureSizeConst = glGetUniformLocation(screenSquareShaderProg, "textureSize");
-    glUniform2f(textureSizeConst, sim::WORLD_SIZE_X, sim::WORLD_SIZE_Y);
+    glUniform2f(textureSizeConst, MAX_RENDER_RESOLUTION_X, MAX_RENDER_RESOLUTION_Y);
 
     screenSizeConst = glGetUniformLocation(screenSquareShaderProg, "screenSize");
     glUniform2f(screenSizeConst, static_cast<float>(glArea.get_width()), static_cast<float>(glArea.get_height()));

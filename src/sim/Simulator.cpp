@@ -17,22 +17,26 @@
 namespace sim {
 
 Simulator::Simulator() {
+    // Load map:
+    map = Map::load_from_file("/home/fabian/Documents/Repos/movement-sim/munich.json");
+
     shader = std::vector(RANDOM_MOVE_COMP_SPV.begin(), RANDOM_MOVE_COMP_SPV.end());
 
     add_entities();
     tensorEntities = mgr.tensor(entities->data(), entities->size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eDouble);
 
     params = {tensorEntities};
-    algo = mgr.algorithm(params, shader, {}, {}, std::vector<float>{WORLD_SIZE_X, WORLD_SIZE_Y});
+    algo = mgr.algorithm(params, shader, {}, {}, std::vector<float>{map->width, map->height});
 }
 
 void Simulator::add_entities() {
+    assert(map);
     entities = std::make_shared<std::vector<Entity>>();
     entities->reserve(MAX_ENTITIES);
     for (size_t i = 1; i <= MAX_ENTITIES; i++) {
         entities->push_back(Entity(Rgb::random_color(),
-                                   Vec2::random_vec(0, WORLD_SIZE_X, 0, WORLD_SIZE_Y),
-                                   Vec2::random_vec(0, WORLD_SIZE_X, 0, WORLD_SIZE_Y),
+                                   Vec2::random_vec(0, map->width, 0, map->height),
+                                   Vec2::random_vec(0, map->width, 0, map->height),
                                    {0, 0},
                                    Entity::random_int(),
                                    false));
@@ -61,9 +65,6 @@ const std::shared_ptr<Map> Simulator::get_map() const {
 void Simulator::start_worker() {
     assert(state == SimulatorState::STOPPED);
     assert(!simThread);
-
-    // Load map:
-    map = Map::load_from_file("/home/fabian/Documents/Repos/movement-sim/munich.json");
 
     SPDLOG_INFO("Starting simulation thread...");
     state = SimulatorState::RUNNING;
