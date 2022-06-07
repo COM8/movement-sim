@@ -10,9 +10,12 @@ class SimulationOverlayWidget : public Gtk::DrawingArea {
  private:
     std::shared_ptr<sim::Simulator> simulator{nullptr};
     SimulationWidget* simWidget{nullptr};
+    bool enableDebugOverlay{true};
 
  public:
     explicit SimulationOverlayWidget(SimulationWidget* simWidget);
+
+    void set_debug_overlay_enabled(bool enableDebugOverlay);
 
  private:
     void prep_widget();

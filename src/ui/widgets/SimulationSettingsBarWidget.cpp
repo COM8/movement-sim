@@ -6,23 +6,33 @@
 #include <gtkmm/enums.h>
 
 namespace ui::widgets {
-SimulationSettingsBarWidget::SimulationSettingsBarWidget(SimulationWidget* simWidget) : Gtk::Box(Gtk::Orientation::HORIZONTAL),
-                                                                                        simWidget(simWidget),
-                                                                                        simulator(sim::Simulator::get_instance()) {
+SimulationSettingsBarWidget::SimulationSettingsBarWidget(SimulationWidget* simWidget, SimulationOverlayWidget* simOverlayWidget) : Gtk::Box(Gtk::Orientation::HORIZONTAL),
+                                                                                                                                   simWidget(simWidget),
+                                                                                                                                   simOverlayWidget(simOverlayWidget),
+                                                                                                                                   simulator(sim::Simulator::get_instance()) {
     prep_widget();
 }
 
 void SimulationSettingsBarWidget::prep_widget() {
-    simulateSwitch.property_active().signal_changed().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_simulate_toggled));
-    simulateSwitch.set_tooltip_text("Enable simulation");
-    simulateSwitch.set_margin_start(10);
-    append(simulateSwitch);
+    simulateTBtn.property_active().signal_changed().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_simulate_toggled));
+    simulateTBtn.set_image_from_icon_name("system-run");
+    simulateTBtn.set_tooltip_text("Enable simulation");
+    simulateTBtn.set_margin_start(10);
+    append(simulateTBtn);
 
-    renderSwitch.property_active().signal_changed().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_render_toggled));
-    renderSwitch.set_active();
-    renderSwitch.set_tooltip_text("Enable UI updates");
-    renderSwitch.set_margin_start(10);
-    append(renderSwitch);
+    renderTBtn.property_active().signal_changed().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_render_toggled));
+    renderTBtn.set_active();
+    renderTBtn.set_image_from_icon_name("video-display");
+    renderTBtn.set_tooltip_text("Enable renderer");
+    renderTBtn.set_margin_start(10);
+    append(renderTBtn);
+
+    debugOverlayTBtn.property_active().signal_changed().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_debug_overlay_toggled));
+    debugOverlayTBtn.set_image_from_icon_name("text-x-generic-template");
+    debugOverlayTBtn.set_active();
+    debugOverlayTBtn.set_margin_start(10);
+    debugOverlayTBtn.set_tooltip_text("Toggle debug overlay");
+    append(debugOverlayTBtn);
 
     zoomInBtn.signal_clicked().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_zoom_in_clicked));
     zoomInBtn.set_tooltip_text("Zoom in");
@@ -53,7 +63,7 @@ void SimulationSettingsBarWidget::prep_widget() {
 //-----------------------------Events:-----------------------------
 void SimulationSettingsBarWidget::on_simulate_toggled() {
     assert(simulator);
-    if (simulateSwitch.get_active()) {
+    if (simulateTBtn.get_active()) {
         simulator->continue_simulation();
     } else {
         simulator->pause_simulation();
@@ -62,7 +72,12 @@ void SimulationSettingsBarWidget::on_simulate_toggled() {
 
 void SimulationSettingsBarWidget::on_render_toggled() {
     assert(simWidget);
-    simWidget->enableUiUpdates = renderSwitch.get_active();
+    simWidget->enableUiUpdates = renderTBtn.get_active();
+}
+
+void SimulationSettingsBarWidget::on_debug_overlay_toggled() {
+    assert(simOverlayWidget);
+    simOverlayWidget->set_debug_overlay_enabled(debugOverlayTBtn.get_active());
 }
 
 void SimulationSettingsBarWidget::on_zoom_in_clicked() {

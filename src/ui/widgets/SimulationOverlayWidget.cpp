@@ -39,8 +39,16 @@ void SimulationOverlayWidget::draw_text(const std::string& text, const Cairo::Re
     ctx->restore();
 }
 
+void SimulationOverlayWidget::set_debug_overlay_enabled(bool enableDebugOverlay) {
+    this->enableDebugOverlay = enableDebugOverlay;
+}
+
 //-----------------------------Events:-----------------------------
 void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context>& ctx, int /*width*/, int /*height*/) {
+    if (!enableDebugOverlay) {
+        return;
+    }
+
     assert(simulator);
     assert(simWidget);
 
