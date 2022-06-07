@@ -5,7 +5,11 @@
 #include <cassert>
 
 namespace ui::widgets::opengl {
-void EntityGlObject::set_entities(std::shared_ptr<std::vector<sim::Entity>>& entities) {
+void EntityGlObject::set_entities(const std::shared_ptr<std::vector<sim::Entity>>& entities) {
+    // glUseProgram(shaderProg);
+    // glBindVertexArray(vao);
+    // GLERR;
+
     entityCount = entities ? static_cast<GLsizei>(entities->size()) : 0;
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Entity)) * entityCount, static_cast<void*>(entities->data()), GL_DYNAMIC_DRAW);
 }
@@ -16,7 +20,11 @@ void EntityGlObject::init_internal() {
     assert(map);
 
     // Vertex data:
-    glBufferData(GL_ARRAY_BUFFER, sizeof(sim::Entity) * sim::MAX_ENTITIES, nullptr, GL_DYNAMIC_DRAW);
+    assert(simulator);
+    std::shared_ptr<std::vector<sim::Entity>> entities = simulator->get_entities();
+    entityCount = entities ? static_cast<GLsizei>(entities->size()) : 0;
+    assert(entities);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Entity) * entities->size()), static_cast<void*>(entities->data()), GL_DYNAMIC_DRAW);
 
     // Compile shader:
     vertShader = compile_shader("/ui/shader/person/person.vert", GL_VERTEX_SHADER);
@@ -49,8 +57,8 @@ void EntityGlObject::init_internal() {
         shaderProg = 0;
     } else {
         glDetachShader(shaderProg, fragShader);
-        glDetachShader(shaderProg, vertShader);
         glDetachShader(shaderProg, geomShader);
+        glDetachShader(shaderProg, vertShader);
     }
     GLERR;
 

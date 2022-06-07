@@ -138,25 +138,25 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
         // Get default frame buffer since in GTK it is not always 0:
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFb);
 
+        // Draw:
+        glDisable(GL_DEPTH_TEST);
+
+        // 1.0 Draw to buffer:
+        glBindFramebuffer(GL_FRAMEBUFFER, fbuf);
+        glClearColor(0, 0, 0, 0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        GLERR;
+
+        // 1.1 Blur:
+
+        // 1.2 Draw map:
+        mapObj.render();
+
+        // 1.3 Draw people:
         if (entitiesChanged) {
-            // Draw:
-            glDisable(GL_DEPTH_TEST);
-
-            // 1.0 Draw to buffer:
-            glBindFramebuffer(GL_FRAMEBUFFER, fbuf);
-            glClearColor(0, 0, 0, 0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            GLERR;
-
-            // 1.1 Blur:
-
-            // 1.2 Draw map:
-            mapObj.render();
-
-            // 1.3 Draw people:
             entityObj.set_entities(this->entities);
-            entityObj.render();
         }
+        entityObj.render();
 
         // 2.0 Draw to screen:
         glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);

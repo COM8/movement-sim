@@ -10,6 +10,10 @@ void MapGlObject::init_internal() {
     const std::shared_ptr<sim::Map> map = simulator->get_map();
     assert(map);
 
+    // Vertex data:
+    size_t size = map->linesCompact.size();
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::LineCompact) * size), static_cast<void*>(map->linesCompact.data()), GL_STATIC_DRAW);
+
     // Compile shader:
     vertShader = compile_shader("/ui/shader/map/map.vert", GL_VERTEX_SHADER);
     assert(vertShader > 0);
@@ -50,11 +54,6 @@ void MapGlObject::init_internal() {
     glVertexAttribPointer(mapPosAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::Vec2), nullptr);
     GLERR;
 
-    // Vertex data:
-    size_t size = map->linesCompact.size();
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::LineCompact) * size), static_cast<void*>(map->linesCompact.data()), GL_STATIC_DRAW);
-    GLERR;
-
     GLint worldSizeConst = glGetUniformLocation(shaderProg, "worldSize");
     GLERR;
     glUniform2f(worldSizeConst, map->width, map->height);
@@ -62,6 +61,7 @@ void MapGlObject::init_internal() {
 }
 
 void MapGlObject::render_internal() {
+    glLineWidth(1);
     glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(simulator->get_map()->linesCompact.size()));
 }
 

@@ -7,30 +7,24 @@ AbstractGlObject::AbstractGlObject() : simulator(sim::Simulator::get_instance())
 
 void AbstractGlObject::init() {
     glGenVertexArrays(1, &vao);
-    GLERR;
     glBindVertexArray(vao);
-    GLERR;
 
     glGenBuffers(1, &vbo);
-    GLERR;
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    GLERR;
 
     shaderProg = glCreateProgram();
-    GLERR;
 
     init_internal();
     GLERR;
 
     glBindVertexArray(0);
-    GLERR;
+    glEnableVertexAttribArray(0);
 }
 
 void AbstractGlObject::render() {
+    glUseProgram(shaderProg);
     glBindVertexArray(vao);
     GLERR;
-
-    glUseProgram(shaderProg);
 
     render_internal();
     GLERR;
