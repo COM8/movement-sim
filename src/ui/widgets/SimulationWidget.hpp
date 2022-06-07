@@ -1,5 +1,8 @@
 #pragma once
 
+#include "opengl/EntityGlObject.hpp"
+#include "opengl/MapGlObject.hpp"
+#include "opengl/ScreenSquareGlObject.hpp"
 #include "sim/Entity.hpp"
 #include "sim/Simulator.hpp"
 #include "utils/TickDurationHistory.hpp"
@@ -9,9 +12,6 @@
 #include <gtkmm.h>
 #include <gtkmm/glarea.h>
 #include <gtkmm/scrolledwindow.h>
-#include "opengl/EntityGlObject.hpp"
-#include "opengl/MapGlObject.hpp"
-#include "opengl/ScreenSquareGlObject.hpp"
 
 namespace ui::widgets {
 class SimulationWidget : public Gtk::ScrolledWindow {
