@@ -12,5 +12,5 @@ set(RESOURCE_DIR ${RESOURCE_DIR} PARENT_SCOPE)
 set(RESOURCE_DEPS ${RESOURCE_DEPS} PARENT_SCOPE)
 
 # ${ADWAITA_LIBRARIES}
-target_link_libraries(ui PUBLIC PkgConfig::GTKMM ui_windows
+target_link_libraries(ui PUBLIC PkgConfig::GTKMM ${ADWAITA_LIBRARIES} ui_windows
                          PRIVATE logger)

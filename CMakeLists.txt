@@ -68,6 +68,10 @@ set(ENV{PKG_CONFIG_PATH} "/usr/lib/pkgconfig")
 pkg_check_modules(GTKMM gtkmm-4.0>=4.4.0 REQUIRED IMPORTED_TARGET)
 pkg_check_modules(EPOXY epoxy REQUIRED IMPORTED_TARGET)
 
+# Lib adwaita
+pkg_check_modules(ADWAITA REQUIRED libadwaita-1>=1.1.0)
+include_directories(${ADWAITA_INCLUDE_DIRS})
+
 # Disable linting for fetch content projects
 clear_variable(DESTINATION CMAKE_CXX_CLANG_TIDY BACKUP CMAKE_CXX_CLANG_TIDY_BKP)
 clear_variable(DESTINATION CMAKE_CXX_FLAGS BACKUP CMAKE_CXX_FLAGS_BKP)

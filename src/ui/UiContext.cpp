@@ -1,7 +1,14 @@
 #include "UiContext.hpp"
+#include <adwaita.h>
+#include <gdkmm/display.h>
+#include <gtkmm/icontheme.h>
+#include <gtkmm/settings.h>
 
 namespace ui {
 int UiContext::run(int argc, char** argv) {
+    // Initialize Adwaita:
+    adw_init();
+
     // Create the main GTK application:
     app = Gtk::Application::create("de.msim");
 
