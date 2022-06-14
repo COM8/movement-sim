@@ -43,9 +43,6 @@ void SimulationWidget::set_zoom_factor(float zoomFactor) {
 void SimulationWidget::prep_widget() {
     set_expand();
 
-    get_vadjustment()->signal_value_changed().connect(sigc::mem_fun(*this, &SimulationWidget::on_adjustment_changed));
-    get_hadjustment()->signal_value_changed().connect(sigc::mem_fun(*this, &SimulationWidget::on_adjustment_changed));
-
     glArea.signal_render().connect(sigc::mem_fun(*this, &SimulationWidget::on_render_handler), true);
     glArea.signal_realize().connect(sigc::mem_fun(*this, &SimulationWidget::on_realized));
     glArea.signal_unrealize().connect(sigc::mem_fun(*this, &SimulationWidget::on_unrealized));
@@ -184,9 +181,9 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
 bool SimulationWidget::on_tick(const Glib::RefPtr<Gdk::FrameClock>& /*frameClock*/) {
     assert(simulator);
 
-    if (simulator->is_simulating()) {
+    if (this->enableUiUpdates) {
+        glArea.queue_draw();
     }
-    glArea.queue_draw();
     return true;
 }
 
@@ -218,9 +215,5 @@ void SimulationWidget::on_unrealized() {
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred deleting the context current during unrealize: {} - {} - {}", gle.domain(), gle.code(), gle.what());
     }
-}
-
-void SimulationWidget::on_adjustment_changed() {
-    glArea.queue_draw();
 }
 }  // namespace ui::widgets
