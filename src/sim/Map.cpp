@@ -7,6 +7,7 @@
 #include <fstream>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <random>
 
 namespace sim {
 Coordinate::Coordinate(Vec2 pos) : pos(pos) {}
@@ -91,5 +92,12 @@ std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
 
     SPDLOG_INFO("Map loaded from '{}'.", path.string());
     return std::make_shared<Map>(width, height, std::move(lines), std::move(linesCompact));
+}
+
+LineCompact Map::get_random_line() const {
+    static std::random_device device;
+    static std::mt19937 gen(device());
+    static std::uniform_int_distribution<size_t> distr(0, linesCompact.size());
+    return linesCompact[distr(gen)];
 }
 }  // namespace sim

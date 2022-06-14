@@ -4,6 +4,7 @@
 #include "logger/Logger.hpp"
 #include "random_move.hpp"
 #include "sim/Entity.hpp"
+#include "sim/Map.hpp"
 #include "spdlog/spdlog.h"
 #include <cassert>
 #include <chrono>
@@ -34,9 +35,10 @@ void Simulator::add_entities() {
     entities = std::make_shared<std::vector<Entity>>();
     entities->reserve(MAX_ENTITIES);
     for (size_t i = 1; i <= MAX_ENTITIES; i++) {
+        const LineCompact target = map->get_random_line();
         entities->push_back(Entity(Rgb::random_color(),
-                                   Vec2::random_vec(0, map->width, 0, map->height),
-                                   Vec2::random_vec(0, map->width, 0, map->height),
+                                   Vec2(target.start),
+                                   Vec2(target.end),
                                    {0, 0},
                                    Entity::random_int(),
                                    false));

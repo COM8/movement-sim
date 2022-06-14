@@ -27,11 +27,14 @@ class Map {
  public:
     float width;
     float height;
+    std::vector<uint> connections;
     std::vector<Line> lines;
     std::vector<LineCompact> linesCompact;
 
     Map(float width, float height, std::vector<Line>&& lines, std::vector<LineCompact>&& linesCompact);
 
     static std::shared_ptr<Map> load_from_file(const std::filesystem::path& path);
+
+    [[nodiscard]] LineCompact get_random_line() const;
 };
 }  // namespace sim
