@@ -2,8 +2,12 @@
 #include "sim/Simulator.hpp"
 #include "ui/widgets/SimulationWidget.hpp"
 #include <cassert>
+#include <gdkmm/display.h>
+#include <gdkmm/pixbuf.h>
 #include <gtkmm/box.h>
 #include <gtkmm/enums.h>
+#include <gtkmm/icontheme.h>
+#include <gtkmm/image.h>
 
 namespace ui::widgets {
 SimulationSettingsBarWidget::SimulationSettingsBarWidget(SimulationWidget* simWidget, SimulationOverlayWidget* simOverlayWidget) : Gtk::Box(Gtk::Orientation::HORIZONTAL),
@@ -14,50 +18,59 @@ SimulationSettingsBarWidget::SimulationSettingsBarWidget(SimulationWidget* simWi
 }
 
 void SimulationSettingsBarWidget::prep_widget() {
+    mainBox.add_css_class("linked");
+    mainBox.set_margin_start(10);
+    append(mainBox);
+
+    zoomBox.add_css_class("linked");
+    zoomBox.set_margin_start(10);
+    append(zoomBox);
+
     simulateTBtn.property_active().signal_changed().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_simulate_toggled));
-    simulateTBtn.set_image_from_icon_name("system-run");
+    simulateTBtn.set_icon_name("play-large-symbolic");
     simulateTBtn.set_tooltip_text("Enable simulation");
-    simulateTBtn.set_margin_start(10);
-    append(simulateTBtn);
+    simulateTBtn.add_css_class("suggested-action");
+    mainBox.append(simulateTBtn);
 
     renderTBtn.property_active().signal_changed().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_render_toggled));
     renderTBtn.set_active();
-    renderTBtn.set_image_from_icon_name("video-display");
+    renderTBtn.set_icon_name("display-with-window-symbolic");
     renderTBtn.set_tooltip_text("Enable renderer");
-    renderTBtn.set_margin_start(10);
-    append(renderTBtn);
+    mainBox.append(renderTBtn);
 
     debugOverlayTBtn.property_active().signal_changed().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_debug_overlay_toggled));
-    debugOverlayTBtn.set_image_from_icon_name("text-x-generic-template");
+    debugOverlayTBtn.set_icon_name("closed-captioning-symbolic");
+
+    // Glib::RefPtr<Gtk::IconPaintable> icon = Gtk::IconTheme::get_for_display(Gdk::Display::get_default())->lookup_icon("list-symbolic", 64);
+    // Gtk::Image* iconImage = Gtk::make_managed<Gtk::Image>();
+    // iconImage->set_from_icon_name(icon->get_icon_name());
+    // debugOverlayTBtn.set_child(*iconImage);
+    // debugOverlayTBtn.set_icon_name(icon->get_icon_name());
+
     debugOverlayTBtn.set_active();
-    debugOverlayTBtn.set_margin_start(10);
     debugOverlayTBtn.set_tooltip_text("Toggle debug overlay");
-    append(debugOverlayTBtn);
+    mainBox.append(debugOverlayTBtn);
 
     zoomInBtn.signal_clicked().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_zoom_in_clicked));
     zoomInBtn.set_tooltip_text("Zoom in");
-    zoomInBtn.set_image_from_icon_name("zoom-in");
-    zoomInBtn.set_margin_start(10);
+    zoomInBtn.set_icon_name("zoom-in");
     zoomInBtn.set_sensitive(false);
-    append(zoomInBtn);
+    zoomBox.append(zoomInBtn);
 
     zoomOutBtn.signal_clicked().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_zoom_out_clicked));
     zoomOutBtn.set_tooltip_text("Zoom out");
-    zoomOutBtn.set_image_from_icon_name("zoom-out");
-    zoomOutBtn.set_margin_start(10);
-    append(zoomOutBtn);
+    zoomOutBtn.set_icon_name("zoom-out");
+    zoomBox.append(zoomOutBtn);
 
     zoomFitBtn.signal_clicked().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_zoom_fit_clicked));
     zoomFitBtn.set_tooltip_text("Zoom fit");
-    zoomFitBtn.set_image_from_icon_name("zoom-fit-best");
-    zoomFitBtn.set_margin_start(10);
-    append(zoomFitBtn);
+    zoomFitBtn.set_icon_name("zoom-fit-best");
+    zoomBox.append(zoomFitBtn);
 
     zoomResetBtn.signal_clicked().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_zoom_reset_clicked));
     zoomResetBtn.set_tooltip_text("Zoom reset");
-    zoomResetBtn.set_image_from_icon_name("zoom-original");
-    zoomResetBtn.set_margin_start(10);
-    append(zoomResetBtn);
+    zoomResetBtn.set_icon_name("zoom-original");
+    zoomBox.append(zoomResetBtn);
 }
 
 //-----------------------------Events:-----------------------------
@@ -65,8 +78,10 @@ void SimulationSettingsBarWidget::on_simulate_toggled() {
     assert(simulator);
     if (simulateTBtn.get_active()) {
         simulator->continue_simulation();
+        simulateTBtn.set_icon_name("pause-large-symbolic");
     } else {
         simulator->pause_simulation();
+        simulateTBtn.set_icon_name("play-large-symbolic");
     }
 }
 

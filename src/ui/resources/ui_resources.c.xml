@@ -2,6 +2,7 @@
 <gresources>
   <gresource prefix="/ui/">
     <file>theme.css</file>
+
     <file>shader/person/person.frag</file>
     <file>shader/person/person.vert</file>
     <file>shader/person/person.geom</file>
@@ -10,5 +11,12 @@
     <file>shader/screen_square/screen_square.geom</file>
     <file>shader/map/map.vert</file>
     <file>shader/map/map.frag</file>
+
+    <file preprocess="xml-stripblanks">icons/scalable/action/closed-captioning-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/action/display-with-window-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/action/pause-large-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/action/pencil-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/action/play-large-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/action/test-symbolic.svg</file>
   </gresource>
 </gresources>

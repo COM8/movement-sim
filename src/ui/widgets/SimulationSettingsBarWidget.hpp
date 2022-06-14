@@ -15,6 +15,9 @@ class SimulationSettingsBarWidget : public Gtk::Box {
     SimulationWidget* simWidget{nullptr};
     SimulationOverlayWidget* simOverlayWidget{nullptr};
 
+    Gtk::Box mainBox;
+    Gtk::Box zoomBox;
+
     Gtk::ToggleButton simulateTBtn;
     Gtk::ToggleButton renderTBtn;
     Gtk::ToggleButton debugOverlayTBtn;
