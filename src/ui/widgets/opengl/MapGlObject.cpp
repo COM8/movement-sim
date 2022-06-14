@@ -1,6 +1,7 @@
 
 #include "MapGlObject.hpp"
 #include "sim/Entity.hpp"
+#include "sim/Map.hpp"
 #include "sim/Simulator.hpp"
 #include <cassert>
 
@@ -12,7 +13,7 @@ void MapGlObject::init_internal() {
 
     // Vertex data:
     size_t size = map->linesCompact.size();
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::LineCompact) * size), static_cast<void*>(map->linesCompact.data()), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Vec2) * size * 2), static_cast<void*>(map->linesCompact.data()), GL_STATIC_DRAW);
 
     // Compile shader:
     vertShader = compile_shader("/ui/shader/map/map.vert", GL_VERTEX_SHADER);
@@ -51,7 +52,7 @@ void MapGlObject::init_internal() {
     GLint mapPosAttrib = glGetAttribLocation(shaderProg, "position");
     glEnableVertexAttribArray(mapPosAttrib);
     // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
-    glVertexAttribPointer(mapPosAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::Vec2), nullptr);
+    glVertexAttribPointer(mapPosAttrib, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
     GLERR;
 
     GLint worldSizeConst = glGetUniformLocation(shaderProg, "worldSize");
@@ -62,7 +63,7 @@ void MapGlObject::init_internal() {
 
 void MapGlObject::render_internal() {
     glLineWidth(1);
-    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(simulator->get_map()->linesCompact.size()));
+    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(simulator->get_map()->linesCompact.size() * 2));
 }
 
 void MapGlObject::cleanup_internal() {

@@ -3,6 +3,7 @@
 #include "sim/Entity.hpp"
 #include "spdlog/spdlog.h"
 #include <cassert>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -86,11 +87,19 @@ std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
 
         Vec2 start{latStart, longStart};
         Vec2 end{latEnd, longEnd};
+
+        // Ensure we don't have any zero long edges (points):
+        if (start.x == end.x && start.y == end.y) {
+            SPDLOG_WARN("Zero length road detected. Skipping...");
+            continue;
+        }
+
         lines.emplace_back(Line{Coordinate{start}, Coordinate{end}});
         linesCompact.emplace_back(LineCompact{start, end});
     }
 
-    SPDLOG_INFO("Map loaded from '{}'.", path.string());
+    SPDLOG_INFO("Map loaded from '{}'. Found {} lines.", path.string(), linesCompact.size());
+    assert(lines.size() == linesCompact.size());
     return std::make_shared<Map>(width, height, std::move(lines), std::move(linesCompact));
 }
 
