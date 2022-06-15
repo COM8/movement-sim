@@ -1,5 +1,5 @@
 import geojson, json
-from typing import Dict, List, Tuple, Union, Any
+from typing import Dict, List, Tuple, Union, Any, Set
 from haversine import haversine
 from sys import float_info
 
@@ -41,19 +41,36 @@ class Coordinate:
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def __hash__(self):
+        return hash(f"{self.lat}-{self.long}")
+
 
 class Road:
     start: Coordinate
     end: Coordinate
+    connIndexStart: int
+    connCountStart: int
+    connIndexEnd: int
+    connCountEnd: int
+    index: int
 
     def __init__(self, start: Coordinate, end: Coordinate):
         self.start = start
         self.end = end
+        self.connIndexStart = -1
+        self.connCountStart = 0
+        self.connIndexEnd = -1
+        self.connCountEnd = 0
+        self.index = -1
 
     def to_json(self) -> Dict[str, Any]:
         return {
             "start": self.start.to_json(),
-            "end": self.end.to_json()
+            "end": self.end.to_json(),
+            "connIndexStart": self.connIndexStart,
+            "connCountStart": self.connCountStart,
+            "connIndexEnd": self.connIndexEnd,
+            "connCountEnd": self.connCountEnd
         }
     
     def __eq__(self, other):
@@ -62,9 +79,13 @@ class Road:
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def __hash__(self):
+        return hash(self.start) ^ hash(self.end)
 
 class Map:
     roads: List[Road]
+    connectionsMap: Dict[Coordinate, Set[Road]]
+    connectionRoadIndexList: List[int]
     
     minDistLat: float
     maxDistLat: float
@@ -74,6 +95,8 @@ class Map:
 
     def __init__(self):
         self.roads = list()
+        self.connectionsMap = dict()
+        self.connectionRoadIndexList = list()
         
         self.minDistLat = float_info.max
         self.maxDistLat = 0
@@ -132,7 +155,8 @@ class Map:
             "maxDistLat": self.maxDistLat,
             "minDistLong": self.minDistLong,
             "maxDistLong": self.maxDistLong,
-            "roads": [r.to_json() for r in self.roads]
+            "roads": [r.to_json() for r in self.roads],
+            "connectionRoadIndexList": self.connectionRoadIndexList
         }
 
 
@@ -165,17 +189,28 @@ def remove_not_connected(map: Map, refPoint: Tuple[float, float]) -> None:
     
     while next:
         curRoad: Road = next.pop()
+        
+        # Update connected roads:
+        if not curRoad.start in map.connectionsMap:
+            map.connectionsMap[curRoad.start] = set()
+        map.connectionsMap[curRoad.start].add(curRoad)
+        if not curRoad.end in map.connectionsMap:
+            map.connectionsMap[curRoad.end] = set()
+        map.connectionsMap[curRoad.end].add(curRoad)
+        
         result.append(curRoad)
         road: Road
         for road in roads:
             if curRoad.end == road.start:
                 road.end.calc_dist(refPoint[0], refPoint[1])
+                
                 # Ensure we don't have hay gaps between roads due to floating point inaccuracies:
                 road.start = curRoad.end
                 next.append(road)
                 roads.remove(road)
             elif curRoad.end == road.end:
                 road.end = road.start
+                
                 # Ensure we don't have hay gaps between roads due to floating point inaccuracies:
                 road.start = curRoad.end
                 road.end.calc_dist(refPoint[0], refPoint[1])
@@ -184,10 +219,35 @@ def remove_not_connected(map: Map, refPoint: Tuple[float, float]) -> None:
                 
         if len(result) % 10 == 0:
             print(f"Status: {len(result)}/{len(roads)} - {len(next)}")
-        if len(result) % 10000 == 0:
-            break
+        if len(result) % 100 == 0:
+            pass
+            # break
     
     map.roads = result
+
+def build_road_connections(map: Map) -> None:
+    # Ensure every road has an index:
+    for i in range(len(map.roads)):
+        map.roads[i].index = i
+    
+    # Build road connections list:
+    connectionSet: Set[Road]
+    for coord, connectionSet in map.connectionsMap.items():
+        connIndex: int = len(map.connectionRoadIndexList)
+        road: Road
+        # We ignore roads where start == end
+        for road in connectionSet:
+            map.connectionRoadIndexList.append(road.index)
+            if road.start == coord:
+                road.connIndexStart = connIndex
+                road.connCountStart = len(connectionSet)
+            elif road.end == coord:
+                map.connectionRoadIndexList.append(road.index)
+                road.connIndexEnd = connIndex
+                road.connCountEnd = len(connectionSet)
+            else:
+                assert(False) # Should not happen since a road is alway only in the set if either the start or end coordinate match :)
+        
 
 print("Loading map from file...")
 with open("map/munich.geojson") as f:
@@ -201,6 +261,10 @@ print("Removing not connected roads...")
 refPoint: Tuple[float, float] = map.get_min_lat_long()
 remove_not_connected(map, refPoint)
 print(f"Reduced to {len(map.roads)} connected road pieces.")
+
+print("Building connections...")
+build_road_connections(map)
+print(f"Found {len(map.connectionRoadIndexList)} connections.")
 
 print("Converting coordinates...")
 map.update_min_max_dist()
