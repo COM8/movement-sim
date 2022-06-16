@@ -3,15 +3,13 @@
 #include "sim/Entity.hpp"
 #include "sim/Simulator.hpp"
 #include <cassert>
+#include <epoxy/gl_generated.h>
 
 namespace ui::widgets::opengl {
 void EntityGlObject::set_entities(const std::shared_ptr<std::vector<sim::Entity>>& entities) {
-    // glUseProgram(shaderProg);
-    // glBindVertexArray(vao);
-    // GLERR;
-
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
     entityCount = entities ? static_cast<GLsizei>(entities->size()) : 0;
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Entity)) * entityCount, static_cast<void*>(entities->data()), GL_DYNAMIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(sizeof(sim::Entity)) * entityCount, static_cast<void*>(entities->data()));
 }
 
 void EntityGlObject::init_internal() {
@@ -77,7 +75,7 @@ void EntityGlObject::init_internal() {
     glUniform2f(worldSizeConst, map->width, map->height);
 
     rectSizeConst = glGetUniformLocation(shaderProg, "rectSize");
-    glUniform2f(rectSizeConst, 1, 1);
+    glUniform2f(rectSizeConst, 5, 5);
     GLERR;
 }
 
