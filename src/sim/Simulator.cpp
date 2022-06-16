@@ -25,8 +25,9 @@ Simulator::Simulator() {
 
     add_entities();
     tensorEntities = mgr.tensor(entities->data(), entities->size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eDouble);
-
-    params = {tensorEntities};
+    tensorRoads = mgr.tensor(map->roads.data(), map->roads.size(), sizeof(Road), kp::Tensor::TensorDataTypes::eDouble);
+    tensorConnections = mgr.tensorT(map->connections);
+    params = {tensorEntities, tensorRoads, tensorConnections};
     algo = mgr.algorithm(params, shader, {}, {}, std::vector<float>{map->width, map->height});
 }
 
@@ -35,13 +36,15 @@ void Simulator::add_entities() {
     entities = std::make_shared<std::vector<Entity>>();
     entities->reserve(MAX_ENTITIES);
     for (size_t i = 1; i <= MAX_ENTITIES; i++) {
-        const LineCompact target = map->get_random_line();
+        const unsigned int roadIndex = map->get_random_road_index();
+        const Road road = map->roads[roadIndex];
         entities->push_back(Entity(Rgb::random_color(),
-                                   Vec2(target.start),
-                                   Vec2(target.end),
+                                   Vec2(road.start.pos),
+                                   Vec2(road.end.pos),
                                    {0, 0},
                                    Entity::random_int(),
-                                   false));
+                                   false,
+                                   roadIndex));
     }
 }
 
@@ -95,11 +98,11 @@ void Simulator::sim_worker() {
     std::shared_ptr<kp::Sequence> sendSeq = mgr.sequence()->record<kp::OpTensorSyncDevice>(params);
     sendSeq->evalAsync();
     std::shared_ptr<kp::Sequence> calcSeq = mgr.sequence()->record<kp::OpAlgoDispatch>(algo);
-    std::shared_ptr<kp::Sequence> retriveSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>(params);
+    std::shared_ptr<kp::Sequence> retrieveSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>(params);
     sendSeq->evalAwait();
 
     // Make sure we have started receiving once:
-    retriveSeq->evalAsync();
+    retrieveSeq->evalAsync();
 
     std::unique_lock<std::mutex> lk(waitMutex);
     while (state == SimulatorState::RUNNING) {
@@ -109,18 +112,18 @@ void Simulator::sim_worker() {
         if (!simulating) {
             continue;
         }
-        sim_tick(sendSeq, calcSeq, retriveSeq);
+        sim_tick(sendSeq, calcSeq, retrieveSeq);
     }
 }
 
-void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retriveSeq) {
+void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveSeq) {
     std::chrono::high_resolution_clock::time_point tickStart = std::chrono::high_resolution_clock::now();
 
     calcSeq->eval();
     if (!entities) {
-        retriveSeq->evalAwait();
+        retrieveSeq->evalAwait();
         entities = std::make_shared<std::vector<Entity>>(tensorEntities->vector<Entity>());
-        retriveSeq->evalAsync();
+        retrieveSeq->evalAsync();
         // for (const Entity& e : *entities) {
         //     assert(e.target.x >= 0 && e.target.x <= WORLD_SIZE_X);
         //     assert(e.target.y >= 0 && e.target.y <= WORLD_SIZE_Y);

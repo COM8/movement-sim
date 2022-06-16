@@ -11,12 +11,15 @@
 #include <random>
 
 namespace sim {
-Coordinate::Coordinate(Vec2 pos) : pos(pos) {}
+Coordinate::Coordinate(Vec2 pos, unsigned int connectedIndex, unsigned int connectedCount) : pos(pos),
+                                                                                             connectedIndex(connectedIndex),
+                                                                                             connectedCount(connectedCount) {}
 
-Map::Map(float width, float height, std::vector<Line>&& lines, std::vector<LineCompact>&& linesCompact) : width(width),
-                                                                                                          height(height),
-                                                                                                          lines(std::move(lines)),
-                                                                                                          linesCompact(std::move(linesCompact)) {}
+Map::Map(float width, float height, std::vector<Road>&& roads, std::vector<RoadCompact>&& roadsCompact, std::vector<unsigned int>&& connections) : width(width),
+                                                                                                                                                   height(height),
+                                                                                                                                                   roads(std::move(roads)),
+                                                                                                                                                   roadsCompact(std::move(roadsCompact)),
+                                                                                                                                                   connections(std::move(connections)) {}
 
 std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
     SPDLOG_INFO("Loading map from '{}'...", path.string());
@@ -44,8 +47,8 @@ std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
     float height = 0;
     json.at("maxDistLong").get_to(height);
 
-    std::vector<Line> lines;
-    std::vector<LineCompact> linesCompact;
+    std::vector<Road> roads;
+    std::vector<RoadCompact> roadsCompact;
 
     if (!json.contains("roads")) {
         throw std::runtime_error("Failed to parse map. 'roads' field missing.");
@@ -53,10 +56,23 @@ std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
     nlohmann::json::array_t roadsArray;
     json.at("roads").get_to(roadsArray);
     for (const nlohmann::json& jRoad : roadsArray) {
+        if (!jRoad.contains("connIndexStart")) {
+            throw std::runtime_error("Failed to parse map. 'connIndexStart' field missing.");
+        }
+        unsigned int connIndexStart = 0;
+        jRoad.at("connIndexStart").get_to(connIndexStart);
+
+        if (!jRoad.contains("connCountStart")) {
+            throw std::runtime_error("Failed to parse map. 'connCountStart' field missing.");
+        }
+        unsigned int connCountStart = 0;
+        jRoad.at("connCountStart").get_to(connCountStart);
+
         if (!jRoad.contains("start")) {
             throw std::runtime_error("Failed to parse map. 'start' field missing.");
         }
         nlohmann::json jStart = jRoad["start"];
+
         if (!jStart.contains("distLat")) {
             throw std::runtime_error("Failed to parse map. 'distLat' field missing.");
         }
@@ -69,10 +85,23 @@ std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
         float longStart = 0;
         jStart.at("distLong").get_to(longStart);
 
+        if (!jRoad.contains("connIndexEnd")) {
+            throw std::runtime_error("Failed to parse map. 'connIndexEnd' field missing.");
+        }
+        unsigned int connIndexEnd = 0;
+        jRoad.at("connIndexEnd").get_to(connIndexEnd);
+
+        if (!jRoad.contains("connCountEnd")) {
+            throw std::runtime_error("Failed to parse map. 'connCountEnd' field missing.");
+        }
+        unsigned int connCountEnd = 0;
+        jRoad.at("connCountEnd").get_to(connCountEnd);
+
         if (!jRoad.contains("end")) {
             throw std::runtime_error("Failed to parse map. 'end' field missing.");
         }
         nlohmann::json jEnd = jRoad["end"];
+
         if (!jEnd.contains("distLat")) {
             throw std::runtime_error("Failed to parse map. 'distLat' field missing.");
         }
@@ -94,19 +123,31 @@ std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
             continue;
         }
 
-        lines.emplace_back(Line{Coordinate{start}, Coordinate{end}});
-        linesCompact.emplace_back(LineCompact{start, end});
+        roads.emplace_back(Road{Coordinate{start, connIndexStart, connCountStart}, Coordinate{end, connIndexEnd, connCountEnd}});
+        roadsCompact.emplace_back(RoadCompact{start, end});
     }
 
-    SPDLOG_INFO("Map loaded from '{}'. Found {} lines.", path.string(), linesCompact.size());
-    assert(lines.size() == linesCompact.size());
-    return std::make_shared<Map>(width, height, std::move(lines), std::move(linesCompact));
+    std::vector<unsigned int> connections{};
+    if (!json.contains("connectionRoadIndexList")) {
+        throw std::runtime_error("Failed to parse map. 'connectionRoadIndexList' field missing.");
+    }
+    nlohmann::json::array_t connectionsArray;
+    json.at("connectionRoadIndexList").get_to(connectionsArray);
+    connections.reserve(connectionsArray.size());
+    for (const nlohmann::json& jConnection : connectionsArray) {
+        assert(jConnection.is_number_unsigned());
+        connections.push_back(static_cast<unsigned int>(jConnection));
+    }
+
+    SPDLOG_INFO("Map loaded from '{}'. Found {} roads with {} connections.", path.string(), roadsCompact.size(), connections.size());
+    assert(roads.size() == roadsCompact.size());
+    return std::make_shared<Map>(width, height, std::move(roads), std::move(roadsCompact), std::move(connections));
 }
 
-LineCompact Map::get_random_line() const {
+unsigned int Map::get_random_road_index() const {
     static std::random_device device;
     static std::mt19937 gen(device());
-    static std::uniform_int_distribution<size_t> distr(0, linesCompact.size());
-    return linesCompact[distr(gen)];
+    static std::uniform_int_distribution<unsigned int> distr(0, roadsCompact.size());
+    return distr(gen);
 }
 }  // namespace sim

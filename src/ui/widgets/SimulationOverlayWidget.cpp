@@ -63,7 +63,8 @@ void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context
     stats += fmt::format("Entities: {}\n", sim::MAX_ENTITIES);
     stats += fmt::format("Zoom: {}\n", simWidget->get_zoom_factor());
     stats += fmt::format("\nMap Size: {}X{}\n", simulator->get_map()->width, simulator->get_map()->height);
-    stats += fmt::format("Lines: {}\n", simulator->get_map()->lines.size());
+    stats += fmt::format("Roads: {}\n", simulator->get_map()->roads.size());
+    stats += fmt::format("Connections: {}\n", simulator->get_map()->connections.size());
     stats += fmt::format("Render Resolution: {}x{}\n", sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y);
     draw_text(stats, ctx, 5, 5);
 }

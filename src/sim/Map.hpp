@@ -4,21 +4,23 @@
 #include <filesystem>
 #include <memory>
 #include <vector>
+#include <sys/types.h>
 
 namespace sim {
 struct Coordinate {
     Vec2 pos;
-    std::vector<size_t> connected{};
+    unsigned int connectedIndex;
+    unsigned int connectedCount;
 
-    explicit Coordinate(Vec2 pos);
-} __attribute__((aligned(32)));
+    Coordinate(Vec2 pos, unsigned int connectedIndex, unsigned int connectedCount);
+} __attribute__((aligned(16)));
 
-struct Line {
+struct Road {
     Coordinate start;
     Coordinate end;
-} __attribute__((aligned(64)));
+} __attribute__((aligned(32)));
 
-struct LineCompact {
+struct RoadCompact {
     Vec2 start;
     Vec2 end;
 } __attribute__((aligned(16)));
@@ -27,14 +29,14 @@ class Map {
  public:
     float width;
     float height;
-    std::vector<uint> connections;
-    std::vector<Line> lines;
-    std::vector<LineCompact> linesCompact;
+    std::vector<Road> roads;
+    std::vector<RoadCompact> roadsCompact;
+    std::vector<unsigned int> connections;
 
-    Map(float width, float height, std::vector<Line>&& lines, std::vector<LineCompact>&& linesCompact);
+    Map(float width, float height, std::vector<Road>&& roads, std::vector<RoadCompact>&& roadsCompact, std::vector<unsigned int>&& connections);
 
     static std::shared_ptr<Map> load_from_file(const std::filesystem::path& path);
 
-    [[nodiscard]] LineCompact get_random_line() const;
+    [[nodiscard]] unsigned int get_random_road_index() const;
 };
 }  // namespace sim

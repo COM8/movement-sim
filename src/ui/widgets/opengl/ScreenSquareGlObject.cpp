@@ -1,7 +1,6 @@
 
 #include "ScreenSquareGlObject.hpp"
 #include "sim/Entity.hpp"
-#include "sim/Simulator.hpp"
 #include <cassert>
 
 namespace ui::widgets::opengl {
@@ -14,15 +13,6 @@ void ScreenSquareGlObject::set_fb_texture(GLuint fbufTexture) {
 }
 
 void ScreenSquareGlObject::init_internal() {
-    assert(simulator);
-    const std::shared_ptr<sim::Map> map = simulator->get_map();
-    assert(map);
-
-    // Vertex data:
-    size_t size = map->linesCompact.size();
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::LineCompact) * size), static_cast<void*>(map->linesCompact.data()), GL_STATIC_DRAW);
-    GLERR;
-
     // Compile shader:
     vertShader = compile_shader("/ui/shader/screen_square/screen_square.vert", GL_VERTEX_SHADER);
     assert(vertShader > 0);

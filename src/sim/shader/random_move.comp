@@ -10,7 +10,19 @@ struct EntityDescriptor {
     vec2 direction;
     int randSeed;
     bool initialized;
-    vec4 padding2; // Make sure we are alligned to 64 bytes like the original entity
+    uint roadIndex;
+    vec3 padding2; // Make sure we are alligned to 64 bytes like the original entity
+};
+
+struct CoordinateDescriptor {
+    vec2 pos;
+    uint connectedIndex;
+    uint connectedCount;
+};
+
+struct RoadDescriptor {
+    CoordinateDescriptor start;
+    CoordinateDescriptor end;
 };
 
 layout(push_constant) uniform PushConstants {
@@ -19,6 +31,8 @@ layout(push_constant) uniform PushConstants {
 } pushConsts;
 
 layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
+layout(set = 0, binding = 1) buffer bufRoads { RoadDescriptor roads[]; };
+layout(set = 0, binding = 2) buffer bufConnections { uint connections[]; };
 
 precision highp float;
 
@@ -83,12 +97,54 @@ bool check_collision(uint index) {
 }
 
 void new_target(uint index) {
+    // Get current road:
+    RoadDescriptor curRoad = roads[entities[index].roadIndex];
+    CoordinateDescriptor curCoord;
+    // Get current coordinate:
+    if(entities[index].target == curRoad.start.pos) {
+        curCoord = curRoad.start;
+        // Just turn around in case there are no other connected roads:
+        if(curCoord.connectedCount <= 1) {
+            entities[index].target = curRoad.end.pos;
+            return;
+        }
+    }
+    else {
+        curCoord = curRoad.end;
+        // Just turn around in case there are no other connected roads:
+        if(curCoord.connectedCount <= 1) {
+            entities[index].target = curRoad.start.pos;
+            return;
+        }
+    }
+
+    uint newRoadIndex = -1;
+    // Only one alternative available? Select it immediately:
+    if(curCoord.connectedCount == 2) {
+        newRoadIndex = connections[curCoord.connectedIndex + 1];
+    }
+    else {
+        uint newRoadOffset = uint(nextFloat(entities[index].randSeed, curCoord.connectedCount));
+        entities[index].randSeed = nextInt(entities[index].randSeed);
+        newRoadIndex = connections[curCoord.connectedIndex + newRoadOffset];
+    }
+
+    // Update the new target:
+    RoadDescriptor newRoad = roads[newRoadIndex];
+    if(newRoad.start.pos == entities[index].target) {
+        entities[index].target = newRoad.end.pos;
+    }
+    else {
+        entities[index].target = newRoad.start.pos;
+    }
+    entities[index].roadIndex = newRoadIndex;
+
     // New random target:
-    float targetX = nextFloat(entities[index].randSeed, pushConsts.worldSizeX);
-    entities[index].randSeed = nextInt(entities[index].randSeed);
-    float targetY = nextFloat(entities[index].randSeed, pushConsts.worldSizeY);
-    entities[index].randSeed = nextInt(entities[index].randSeed);
-    entities[index].target = vec2(targetX, targetY);
+    // float targetX = nextFloat(entities[index].randSeed, pushConsts.worldSizeX);
+    // entities[index].randSeed = nextInt(entities[index].randSeed);
+    // float targetY = nextFloat(entities[index].randSeed, pushConsts.worldSizeY);
+    // entities[index].randSeed = nextInt(entities[index].randSeed);
+    // entities[index].target = vec2(targetX, targetY);
 }
 
 void update_direction(uint index) {
@@ -130,7 +186,7 @@ void main() {
 
     if(!entities[index].initialized) {
         entities[index].initialized = true;
-        new_target(index);
+        // new_target(index);
     }
 
     update_direction(index);

@@ -46,8 +46,8 @@ class Simulator {
 
     std::shared_ptr<std::vector<Entity>> entities;
     std::shared_ptr<kp::Tensor> tensorEntities{nullptr};
-    std::shared_ptr<kp::TensorT<float>> tensorEntityVertices{nullptr};
-    std::shared_ptr<kp::TensorT<float>> tensorEntityVerticElements{nullptr};
+    std::shared_ptr<kp::Tensor> tensorRoads{nullptr};
+    std::shared_ptr<kp::TensorT<unsigned int>> tensorConnections{nullptr};
 
     std::shared_ptr<Map> map{nullptr};
 
@@ -75,7 +75,7 @@ class Simulator {
 
  private:
     void sim_worker();
-    void sim_tick(std::shared_ptr<kp::Sequence>& sendSeq, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retriveSeq);
+    void sim_tick(std::shared_ptr<kp::Sequence>& sendSeq, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveSeq);
     void add_entities();
 };
 }  // namespace sim

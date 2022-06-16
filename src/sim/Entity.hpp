@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace sim {
 struct Vec2 {
     float x{0};
@@ -17,13 +19,16 @@ struct Rgb {
 
 struct Entity {
     Rgb color{1.0, 0.0, 0.0};
+    // float padding1;
     Vec2 pos{};
     Vec2 target{};
     Vec2 direction{};
     int randomSeed = {0};
     bool initialized{false};
+    unsigned int roadIndex{};
+    // vec3 padding2;
 
-    Entity(Rgb&& color, Vec2&& pos, Vec2&& target, Vec2&& direction, int randSeed, bool initialized);
+    Entity(Rgb&& color, Vec2&& pos, Vec2&& target, Vec2&& direction, int randSeed, bool initialized, unsigned int roadIndex);
 
     static int random_int();
 } __attribute__((aligned(64))) __attribute__((__packed__));

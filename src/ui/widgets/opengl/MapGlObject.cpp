@@ -12,8 +12,8 @@ void MapGlObject::init_internal() {
     assert(map);
 
     // Vertex data:
-    size_t size = map->linesCompact.size();
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Vec2) * size * 2), static_cast<void*>(map->linesCompact.data()), GL_STATIC_DRAW);
+    size_t size = map->roadsCompact.size();
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Vec2) * size * 2), static_cast<void*>(map->roadsCompact.data()), GL_STATIC_DRAW);
 
     // Compile shader:
     vertShader = compile_shader("/ui/shader/map/map.vert", GL_VERTEX_SHADER);
@@ -63,7 +63,7 @@ void MapGlObject::init_internal() {
 
 void MapGlObject::render_internal() {
     glLineWidth(1);
-    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(simulator->get_map()->linesCompact.size() * 2));
+    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(simulator->get_map()->roadsCompact.size() * 2));
 }
 
 void MapGlObject::cleanup_internal() {
