@@ -15,9 +15,18 @@
 #include <thread>
 #include <vector>
 
+#ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
+#include <renderdoc_app.h>
+#endif
+
 namespace sim {
 
 Simulator::Simulator() {
+#ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
+    // Init RenderDoc:
+    init_renderdoc();
+#endif
+
     // Load map:
     map = Map::load_from_file("/home/fabian/Documents/Repos/movement-sim/munich.json");
 
@@ -119,7 +128,13 @@ void Simulator::sim_worker() {
 void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveSeq) {
     std::chrono::high_resolution_clock::time_point tickStart = std::chrono::high_resolution_clock::now();
 
+#ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
+    start_frame_capture();
+#endif
     calcSeq->eval();
+#ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
+    end_frame_capture();
+#endif
     if (!entities) {
         retrieveSeq->evalAwait();
         entities = std::make_shared<std::vector<Entity>>(tensorEntities->vector<Entity>());
@@ -171,4 +186,39 @@ const utils::TickRate& Simulator::get_tps() const {
 const utils::TickDurationHistory& Simulator::get_tps_history() const {
     return tpsHistory;
 }
+
+#ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
+void Simulator::init_renderdoc() {
+    SPDLOG_INFO("Initializing RenderDoc in application API...");
+    void* mod = dlopen("/usr/lib64/renderdoc/librenderdoc.so", RTLD_NOW);
+    if (!mod) {
+        // NOLINTNEXTLINE (concurrency-mt-unsafe)
+        const char* error = dlerror();
+        if (error) {
+            SPDLOG_ERROR("Failed to find librenderdoc.so with: {}", error);
+        } else {
+            SPDLOG_ERROR("Failed to find librenderdoc.so with: Unknown error");
+        }
+        assert(false);
+    }
+
+    // NOLINTNEXTLINE (google-readability-casting)
+    pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI) dlsym(mod, "RENDERDOC_GetAPI");
+    // NOLINTNEXTLINE (google-readability-casting)
+    int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_2, (void**) &rdocApi);
+    assert(ret == 1);
+    SPDLOG_INFO("RenderDoc in application API initialized.");
+}
+
+void Simulator::start_frame_capture() {
+    assert(rdocApi);
+    rdocApi->StartFrameCapture(nullptr, nullptr);
+}
+
+void Simulator::end_frame_capture() {
+    assert(rdocApi);
+    rdocApi->EndFrameCapture(nullptr, nullptr);
+}
+
+#endif
 }  // namespace sim

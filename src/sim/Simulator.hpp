@@ -16,6 +16,10 @@
 #include <type_traits>
 #include <vector>
 
+#ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
+#include <renderdoc_app.h>
+#endif
+
 namespace sim {
 enum class SimulatorState {
     STOPPED,
@@ -51,6 +55,10 @@ class Simulator {
 
     std::shared_ptr<Map> map{nullptr};
 
+#ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
+    RENDERDOC_API_1_4_2* rdocApi{nullptr};
+#endif
+
  public:
     Simulator();
     ~Simulator() = default;
@@ -77,5 +85,11 @@ class Simulator {
     void sim_worker();
     void sim_tick(std::shared_ptr<kp::Sequence>& sendSeq, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveSeq);
     void add_entities();
+
+#ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
+    void init_renderdoc();
+    void start_frame_capture();
+    void end_frame_capture();
+#endif
 };
 }  // namespace sim

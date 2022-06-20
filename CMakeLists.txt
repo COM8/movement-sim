@@ -39,6 +39,7 @@ message(STATUS "Movement Simulator client options")
 message(STATUS "=======================================================")
 movement_simulator_option(MOVEMENT_SIMULATOR_STATIC_ANALYZE "Set to ON to enable the GCC 10 static analysis. If enabled, MOVEMENT_SIMULATOR_ENABLE_LINTING has to be disabled." OFF)
 movement_simulator_option(MOVEMENT_SIMULATOR_ENABLE_LINTING "Set to ON to enable clang linting. If enabled, MOVEMENT_SIMULATOR_STATIC_ANALYZE has to be disabled." OFF)
+movement_simulator_option(MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API "Set to ON to enable RenderDoc in application APIs for Kompute to allow inspecting compute shaders." ON)
 movement_simulator_log_level_option(MOVEMENT_SIMULATOR_LOG_LEVEL "Sets the log level. 'Default' will set the log level to 'Debug' for debug builds and 'Info' for release builds." "Off")
 message(STATUS "=======================================================")
 
@@ -71,6 +72,16 @@ pkg_check_modules(EPOXY epoxy REQUIRED IMPORTED_TARGET)
 # Lib adwaita
 pkg_check_modules(ADWAITA REQUIRED libadwaita-1>=1.1.0)
 include_directories(${ADWAITA_INCLUDE_DIRS})
+
+if(MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API)
+    # So CMake can find FindRenderDoc.cmake
+    set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
+
+    message("RenderDoc in application API is enabled.")
+    find_package(RenderDoc REQUIRED)
+    add_compile_definitions(MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API)
+    # pkg_check_modules(RENDERDOC renderdoc>=1.0 REQUIRED IMPORTED_TARGET)
+endif()
 
 # Disable linting for fetch content projects
 clear_variable(DESTINATION CMAKE_CXX_CLANG_TIDY BACKUP CMAKE_CXX_CLANG_TIDY_BKP)

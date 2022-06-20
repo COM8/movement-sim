@@ -9,4 +9,4 @@ add_library(sim Simulator.cpp
                 Map.cpp
                 Map.hpp)
 
-target_link_libraries(sim PRIVATE kompute::kompute logger sim_shader utils nlohmann_json::nlohmann_json)
+target_link_libraries(sim PRIVATE kompute::kompute logger sim_shader utils nlohmann_json::nlohmann_json ${CMAKE_DL_LIBS})
