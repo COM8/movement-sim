@@ -28,15 +28,9 @@ SimulationWidget::SimulationWidget() : simulator(sim::Simulator::get_instance())
 void SimulationWidget::set_zoom_factor(float zoomFactor) {
     assert(zoomFactor > 0);
 
-    assert(simulator);
-    const std::shared_ptr<sim::Map> map = simulator->get_map();
-    assert(map);
-
     this->zoomFactor = zoomFactor;
-    // float widthF = static_cast<float>(map->widthPowerTwo) * this->zoomFactor;
     float widthF = static_cast<float>(sim::MAX_RENDER_RESOLUTION_X) * this->zoomFactor;
     int width = static_cast<int>(widthF);
-    // float heightF = static_cast<float>(map->heightPowerTwo) * this->zoomFactor;
     float heightF = static_cast<float>(sim::MAX_RENDER_RESOLUTION_Y) * this->zoomFactor;
     int height = static_cast<int>(heightF);
     glArea.set_size_request(width, height);
@@ -56,7 +50,6 @@ void SimulationWidget::prep_widget() {
     assert(map);
 
     glArea.set_auto_render();
-    // glArea.set_size_request(static_cast<int>(map->widthPowerTwo), static_cast<int>(map->heightPowerTwo));
     glArea.set_size_request(sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y);
     set_child(glArea);
     screenSquareObj.set_glArea(&glArea);
@@ -72,9 +65,6 @@ const utils::TickDurationHistory& SimulationWidget::get_fps_history() const {
 
 float SimulationWidget::get_zoom_factor() const {
     return zoomFactor;
-}
-
-void SimulationWidget::load_map() {
 }
 
 //-----------------------------Events:-----------------------------
@@ -93,8 +83,8 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             if (entities) {
                 entitiesChanged = true;
                 this->entities = std::move(entities);
-                const sim::Entity& e = (*this->entities)[0];
-                SPDLOG_TRACE("Pos: {}/{} Direction: {}/{} Target: {}/{}", e.pos.x, e.pos.y, e.direction.x, e.direction.y, e.target.x, e.target.y);
+                // const sim::Entity& e = (*this->entities)[0];
+                // SPDLOG_TRACE("Pos: {}/{} Direction: {}/{} Target: {}/{}", e.pos.x, e.pos.y, e.direction.x, e.direction.y, e.target.x, e.target.y);
             }
         }
 

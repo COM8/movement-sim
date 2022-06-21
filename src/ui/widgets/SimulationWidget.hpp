@@ -51,7 +51,6 @@ class SimulationWidget : public Gtk::ScrolledWindow {
 
  private:
     void prep_widget();
-    void load_map();
 
     //-----------------------------Events:-----------------------------
     bool on_render_handler(const Glib::RefPtr<Gdk::GLContext>& ctx);
