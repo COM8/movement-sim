@@ -32,7 +32,5 @@ void main()
     // Layer textures:
     outColor =  texMapColor * (1 - texEntitiesColor.w);
     outColor += texEntitiesColor * texEntitiesColor.w;
-
-    // outColor = 0.5 * (texMapColor + texEntitiesColor);
     return;
 }
