@@ -25,11 +25,11 @@ void EntityGlObject::init_internal() {
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Entity) * entities->size()), static_cast<void*>(entities->data()), GL_DYNAMIC_DRAW);
 
     // Compile shader:
-    vertShader = compile_shader("/ui/shader/person/person.vert", GL_VERTEX_SHADER);
+    vertShader = compile_shader("/ui/shader/entity/entity.vert", GL_VERTEX_SHADER);
     assert(vertShader > 0);
-    geomShader = compile_shader("/ui/shader/person/person.geom", GL_GEOMETRY_SHADER);
+    geomShader = compile_shader("/ui/shader/entity/entity.geom", GL_GEOMETRY_SHADER);
     assert(geomShader > 0);
-    fragShader = compile_shader("/ui/shader/person/person.frag", GL_FRAGMENT_SHADER);
+    fragShader = compile_shader("/ui/shader/entity/entity.frag", GL_FRAGMENT_SHADER);
     assert(fragShader > 0);
 
     // Prepare program:
