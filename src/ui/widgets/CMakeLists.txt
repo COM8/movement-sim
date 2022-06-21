@@ -7,6 +7,6 @@ add_library(ui_widgets SimulationWidget.cpp
                               SimulationSettingsBarWidget.cpp
                               SimulationSettingsBarWidget.hpp)
 
-target_link_libraries(ui_widgets PRIVATE PkgConfig::GTKMM logger sim PkgConfig::EPOXY fmt::fmt utils ui_widgets_opengl)
+target_link_libraries(ui_widgets PRIVATE PkgConfig::GTKMM logger sim PkgConfig::EPOXY fmt::fmt utils ui_widgets_opengl ui_widgets_opengl_fb)
 
 add_subdirectory(opengl)

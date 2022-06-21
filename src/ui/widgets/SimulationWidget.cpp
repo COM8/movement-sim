@@ -5,6 +5,7 @@
 #include "sim/Simulator.hpp"
 #include "spdlog/fmt/bundled/core.h"
 #include "spdlog/spdlog.h"
+#include "ui/widgets/opengl/fb/MapFrameBuffer.hpp"
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -18,7 +19,9 @@
 #include <gtkmm/gesturezoom.h>
 
 namespace ui::widgets {
-SimulationWidget::SimulationWidget() : simulator(sim::Simulator::get_instance()) {
+SimulationWidget::SimulationWidget() : simulator(sim::Simulator::get_instance()),
+                                       mapFrameBuffer(sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y),
+                                       entitiesFrameBuffer(sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y) {
     prep_widget();
 }
 
@@ -57,43 +60,6 @@ void SimulationWidget::prep_widget() {
     glArea.set_size_request(sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y);
     set_child(glArea);
     screenSquareObj.set_glArea(&glArea);
-}
-
-void SimulationWidget::prepare_buffers() {
-    // Get default frame buffer since in GTK it is not always 0:
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFb);
-
-    // Frame buffer:
-    glGenFramebuffers(1, &fbuf);
-    glBindFramebuffer(GL_FRAMEBUFFER, fbuf);
-
-    // Frame buffer texture:
-    glGenTextures(1, &fbufTexture);
-    GLERR;
-    glBindTexture(GL_TEXTURE_2D, fbufTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    std::array<float, 4> borderColor{0.5F, 0.5F, 0.0F, 1.0F};
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor.data());
-    GLERR;
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16, sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y);
-    GLERR;
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    GLERR;
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbufTexture, 0);
-    GLERR;
-
-    // Render buffer for depth and stencil testing:
-    glGenRenderbuffers(1, &rBuf);
-    glBindRenderbuffer(GL_RENDERBUFFER, rBuf);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y);
-    glBindRenderbuffer(GL_RENDERBUFFER, 0);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rBuf);
-    assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
-    GLERR;
-
-    glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);
 }
 
 const utils::TickRate& SimulationWidget::get_fps() const {
@@ -138,33 +104,43 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
         // Draw:
         glDisable(GL_DEPTH_TEST);
 
-        if (entitiesChanged) {
-            // 1.0 Draw to buffer:
-            glBindFramebuffer(GL_FRAMEBUFFER, fbuf);
+        // 1.0 Draw map if needed:
+        if (!mapRendered) {
+            mapRendered = true;
+
+            mapFrameBuffer.bind();
             glClearColor(0, 0, 0, 0);
             glClear(GL_COLOR_BUFFER_BIT);
             GLERR;
 
-            // 1.1 Blur:
-
-            // 1.2 Draw map:
             mapObj.render();
+        }
 
-            // 1.3 Draw entities:
+        // 2.0 Draw to buffer:
+        if (entitiesChanged) {
+            entitiesFrameBuffer.bind();
+            // 2.1 Blur old entities:
+
+            // For now, we just clear them instead of blurring them:
+            glClearColor(0, 0, 0, 0);
+            glClear(GL_COLOR_BUFFER_BIT);
+            GLERR;
+
+            // 2.2 Draw entities:
             entityObj.set_entities(this->entities);
             entityObj.render();
         }
 
-        // 2.0 Draw to screen:
+        // 3.0 Draw to screen:
         glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);
         GLERR;
 
-        // 2.1 Clear the screen:
+        // 3.1 Clear the old screen:
         glClearColor(0, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT);
         GLERR;
 
-        // 2.2 Draw texture from frame buffer:
+        // 3.2 Draw texture from frame buffer:
         screenSquareObj.render();
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred in the render callback of the GLArea: {} - {} - {}", gle.domain(), gle.code(), gle.what());
@@ -191,11 +167,17 @@ void SimulationWidget::on_realized() {
     glArea.make_current();
     try {
         glArea.throw_if_error();
-        prepare_buffers();
+
+        mapFrameBuffer.init();
+        entitiesFrameBuffer.init();
+
+        // Get default frame buffer since in GTK it is not always 0:
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFb);
+        glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);
 
         mapObj.init();
         entityObj.init();
-        screenSquareObj.set_fb_texture(fbufTexture);
+        screenSquareObj.bind_texture(mapFrameBuffer.get_texture(), entitiesFrameBuffer.get_texture());
         screenSquareObj.init();
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred making the context current during realize: {} - {} - {}", gle.domain(), gle.code(), gle.what());
@@ -211,7 +193,8 @@ void SimulationWidget::on_unrealized() {
         entityObj.cleanup();
         screenSquareObj.cleanup();
 
-        glDeleteFramebuffers(1, &fbuf);
+        entitiesFrameBuffer.cleanup();
+        mapFrameBuffer.cleanup();
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred deleting the context current during unrealize: {} - {} - {}", gle.domain(), gle.code(), gle.what());
     }

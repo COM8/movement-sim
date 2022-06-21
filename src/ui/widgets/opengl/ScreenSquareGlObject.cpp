@@ -2,14 +2,15 @@
 #include "ScreenSquareGlObject.hpp"
 #include "sim/Entity.hpp"
 #include <cassert>
+#include <epoxy/gl_generated.h>
 
 namespace ui::widgets::opengl {
 void ScreenSquareGlObject::set_glArea(Gtk::GLArea* glArea) {
     this->glArea = glArea;
 }
 
-void ScreenSquareGlObject::set_fb_texture(GLuint fbufTexture) {
-    this->fbufTexture = fbufTexture;
+void ScreenSquareGlObject::bind_texture(GLuint mapFrameBufferTexture, GLuint entitiesFrameBufferTexture) {
+    frameBufferTextures = {mapFrameBufferTexture, entitiesFrameBufferTexture};
 }
 
 void ScreenSquareGlObject::init_internal() {
@@ -51,7 +52,8 @@ void ScreenSquareGlObject::init_internal() {
 
     // Bind attributes:
     glUseProgram(shaderProg);
-    glUniform1i(glGetUniformLocation(shaderProg, "screenTexture"), 0);
+    glUniform1i(glGetUniformLocation(shaderProg, "mapTexture"), 0);
+    glUniform1i(glGetUniformLocation(shaderProg, "entitiesTexture"), 1);
 
     textureSizeConst = glGetUniformLocation(shaderProg, "textureSize");
     glUniform2f(textureSizeConst, sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y);
@@ -65,7 +67,7 @@ void ScreenSquareGlObject::init_internal() {
 void ScreenSquareGlObject::render_internal() {
     assert(glArea);
     glUniform2f(screenSizeConst, static_cast<float>(glArea->get_width()), static_cast<float>(glArea->get_height()));
-    glBindTexture(GL_TEXTURE_2D, fbufTexture);
+    glBindTextures(0, static_cast<GLsizei>(frameBufferTextures.size()), frameBufferTextures.data());
     glDrawArrays(GL_POINTS, 0, 1);
     GLERR;
 }

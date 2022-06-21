@@ -1,7 +1,9 @@
 #pragma once
 
 #include "AbstractGlObject.hpp"
+#include <array>
 #include <epoxy/gl.h>
+#include <epoxy/gl_generated.h>
 #include <gtkmm/glarea.h>
 
 namespace ui::widgets::opengl {
@@ -14,7 +16,12 @@ class ScreenSquareGlObject : public AbstractGlObject {
     GLint screenSizeConst{0};
     GLint textureSizeConst{0};
 
-    GLuint fbufTexture{0};
+    /**
+     * All textures that should be passed to the shader.
+     * frameBufferTextures[0] is the map texture.
+     * frameBufferTextures[1] is the entities texture.
+     **/
+    std::array<GLuint, 2> frameBufferTextures{};
 
     Gtk::GLArea* glArea{nullptr};
 
@@ -29,7 +36,7 @@ class ScreenSquareGlObject : public AbstractGlObject {
     ScreenSquareGlObject& operator=(ScreenSquareGlObject&& old) = delete;
 
     void set_glArea(Gtk::GLArea* glArea);
-    void set_fb_texture(GLuint fbufTexture);
+    void bind_texture(GLuint mapFrameBufferTexture, GLuint entitiesFrameBufferTexture);
 
  protected:
     void init_internal() override;

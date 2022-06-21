@@ -4,7 +4,8 @@ in vec2 fTexCoordinates;
 
 out vec4 outColor;
 
-uniform sampler2D screenTexture;
+uniform sampler2D mapTexture;
+uniform sampler2D entitiesTexture;
 uniform vec2 textureSize;
 uniform vec2 screenSize;
 
@@ -23,6 +24,15 @@ void main()
         scaleX = 1.0 / textureScreenRatio;
     }
 
-    outColor = texture(screenTexture, fTexCoordinates * vec2(scaleX, scaleY));
+    // Get texture coordinates and colors:
+    vec2 scaledCoords = fTexCoordinates * vec2(scaleX, scaleY);
+    vec4 texMapColor = texture(mapTexture, scaledCoords);
+    vec4 texEntitiesColor = texture(entitiesTexture, scaledCoords);
+
+    // Layer textures:
+    outColor =  texMapColor * (1 - texEntitiesColor.w);
+    outColor += texEntitiesColor * texEntitiesColor.w;
+
+    // outColor = 0.5 * (texMapColor + texEntitiesColor);
     return;
 }

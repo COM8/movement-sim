@@ -3,6 +3,8 @@
 #include "opengl/EntityGlObject.hpp"
 #include "opengl/MapGlObject.hpp"
 #include "opengl/ScreenSquareGlObject.hpp"
+#include "opengl/fb/EntitiesFrameBuffer.hpp"
+#include "opengl/fb/MapFrameBuffer.hpp"
 #include "sim/Entity.hpp"
 #include "sim/Simulator.hpp"
 #include "utils/TickDurationHistory.hpp"
@@ -29,9 +31,9 @@ class SimulationWidget : public Gtk::ScrolledWindow {
     opengl::MapGlObject mapObj{};
     opengl::ScreenSquareGlObject screenSquareObj{};
 
-    GLuint fbuf{0};
-    GLuint rBuf{0};
-    GLuint fbufTexture{0};
+    opengl::fb::MapFrameBuffer mapFrameBuffer;
+    opengl::fb::EntitiesFrameBuffer entitiesFrameBuffer;
+    bool mapRendered{false};
 
     Gtk::GLArea glArea;
     float zoomFactor{1};
@@ -49,7 +51,6 @@ class SimulationWidget : public Gtk::ScrolledWindow {
 
  private:
     void prep_widget();
-    void prepare_buffers();
     void load_map();
 
     //-----------------------------Events:-----------------------------
