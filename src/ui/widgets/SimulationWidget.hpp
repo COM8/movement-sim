@@ -1,5 +1,6 @@
 #pragma once
 
+#include "opengl/BlurGlObject.hpp"
 #include "opengl/EntityGlObject.hpp"
 #include "opengl/MapGlObject.hpp"
 #include "opengl/ScreenSquareGlObject.hpp"
@@ -30,6 +31,7 @@ class SimulationWidget : public Gtk::ScrolledWindow {
     opengl::EntityGlObject entityObj{};
     opengl::MapGlObject mapObj{};
     opengl::ScreenSquareGlObject screenSquareObj{};
+    opengl::BlurGlObject blurObject{};
 
     opengl::fb::MapFrameBuffer mapFrameBuffer;
     opengl::fb::EntitiesFrameBuffer entitiesFrameBuffer;

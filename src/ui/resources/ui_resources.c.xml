@@ -11,6 +11,9 @@
     <file>shader/screen_square/screen_square.geom</file>
     <file>shader/map/map.vert</file>
     <file>shader/map/map.frag</file>
+    <file>shader/blur/blur.vert</file>
+    <file>shader/blur/blur.frag</file>
+    <file>shader/blur/blur.geom</file>
 
     <file preprocess="xml-stripblanks">icons/scalable/action/closed-captioning-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/action/display-with-window-symbolic.svg</file>

@@ -110,6 +110,7 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
         if (entitiesChanged) {
             entitiesFrameBuffer.bind();
             // 2.1 Blur old entities:
+            // blurObject.render();
 
             // For now, we just clear them instead of blurring them:
             glClearColor(0, 0, 0, 0);
@@ -166,6 +167,8 @@ void SimulationWidget::on_realized() {
         glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);
 
         mapObj.init();
+        blurObject.init();
+        blurObject.bind_texture(entitiesFrameBuffer.get_texture());
         entityObj.init();
         screenSquareObj.bind_texture(mapFrameBuffer.get_texture(), entitiesFrameBuffer.get_texture());
         screenSquareObj.init();
@@ -180,6 +183,7 @@ void SimulationWidget::on_unrealized() {
         glArea.throw_if_error();
 
         mapObj.cleanup();
+        blurObject.cleanup();
         entityObj.cleanup();
         screenSquareObj.cleanup();
 

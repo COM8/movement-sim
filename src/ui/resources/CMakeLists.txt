@@ -12,6 +12,9 @@ set(RESOURCE_DEPS ${CMAKE_CURRENT_SOURCE_DIR}/theme.css
     ${CMAKE_CURRENT_SOURCE_DIR}/shader/screen_square/screen_square.geom
     ${CMAKE_CURRENT_SOURCE_DIR}/shader/map/map.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader/map/map.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader/blur/blur.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader/blur/blur.vert
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader/blur/blur.geom
 
     ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/closed-captioning-symbolic.svg
     ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/display-with-window-symbolic.svg
