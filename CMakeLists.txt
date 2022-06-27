@@ -80,7 +80,6 @@ if(MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API)
     message("RenderDoc in application API is enabled.")
     find_package(RenderDoc REQUIRED)
     add_compile_definitions(MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API)
-    # pkg_check_modules(RENDERDOC renderdoc>=1.0 REQUIRED IMPORTED_TARGET)
 endif()
 
 # Disable linting for fetch content projects
