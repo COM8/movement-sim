@@ -39,6 +39,7 @@ AbstractGlFrameBuffer::AbstractGlFrameBuffer(GLsizei sizeX, GLsizei sizeY) : siz
 
 void AbstractGlFrameBuffer::bind() {
     glBindFramebuffer(GL_FRAMEBUFFER, fbuf);
+    glViewport(0, 0, sizeX, sizeY);
     bind_internal();
 }
 

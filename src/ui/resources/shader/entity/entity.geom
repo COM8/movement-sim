@@ -9,15 +9,20 @@ layout(triangle_strip, max_vertices = 4) out;
 in vec3 gColor[];
 out vec3 fColor;
 
+// Normalize to range [-1, 1]:
+vec2 normalize_position(vec2 pos)  {
+    return ((pos / worldSize) * 2) - 1;
+}
+
 void build_rect(vec4 position, vec2 size) {
     size /= 2;
-    gl_Position = position + vec4(- size.x, -size.y, 0.0, 0.0);
+    gl_Position = vec4(normalize_position(position.xy + vec2(-size.x, -size.y)), 0.0, 1.0);
     EmitVertex();
-    gl_Position = position + vec4(size.x, -size.y, 0.0, 0.0);
+    gl_Position = vec4(normalize_position(position.xy + vec2(size.x, -size.y)), 0.0, 1.0);
     EmitVertex();
-    gl_Position = position + vec4(-size.x, size.y, 0.0, 0.0);
+    gl_Position = vec4(normalize_position(position.xy + vec2(-size.x, size.y)), 0.0, 1.0);
     EmitVertex();
-    gl_Position = position + vec4(size.x, size.y, 0.0, 0.0);
+    gl_Position = vec4(normalize_position(position.xy + vec2(size.x, size.y)), 0.0, 1.0);
     EmitVertex();
     EndPrimitive();
 }
@@ -25,7 +30,6 @@ void build_rect(vec4 position, vec2 size) {
 void main()
 {
     fColor = gColor[0];
-    vec2 size = 2 * (rectSize / worldSize);
 
-    build_rect(gl_in[0].gl_Position, size);
+    build_rect(gl_in[0].gl_Position, rectSize / 2);
 }

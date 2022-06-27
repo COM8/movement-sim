@@ -6,6 +6,7 @@
 #include "spdlog/fmt/bundled/core.h"
 #include "spdlog/spdlog.h"
 #include "ui/widgets/opengl/fb/MapFrameBuffer.hpp"
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -91,6 +92,10 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
         // Get default frame buffer since in GTK it is not always 0:
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFb);
 
+        // Backup the old viewport:
+        std::array<int, 4> viewPort{};
+        glGetIntegerv(GL_VIEWPORT, viewPort.data());
+
         // Draw:
         glDisable(GL_DEPTH_TEST);
 
@@ -125,6 +130,9 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
         // 3.0 Draw to screen:
         glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);
         GLERR;
+
+        // Fix view port so it does not only show values in range [-1,0]:
+        glViewport(viewPort[0], viewPort[1], viewPort[2], viewPort[3]);
 
         // 3.1 Clear the old screen:
         glClearColor(0, 0, 0, 0);
