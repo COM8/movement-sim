@@ -75,7 +75,7 @@ void EntityGlObject::init_internal() {
     glUniform2f(worldSizeConst, map->width, map->height);
 
     rectSizeConst = glGetUniformLocation(shaderProg, "rectSize");
-    glUniform2f(rectSizeConst, 5, 5);
+    glUniform2f(rectSizeConst, 10, 10);
     GLERR;
 }
 
