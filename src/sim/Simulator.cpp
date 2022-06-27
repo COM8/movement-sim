@@ -212,12 +212,14 @@ void Simulator::init_renderdoc() {
 
 void Simulator::start_frame_capture() {
     assert(rdocApi);
-    rdocApi->StartFrameCapture(nullptr, nullptr);
+    // NOLINTNEXTLINE (google-readability-casting)
+    rdocApi->StartFrameCapture(RENDERDOC_DEVICEPOINTER_FROM_VKINSTANCE(mgr.getVkInstance().get()), nullptr);
 }
 
 void Simulator::end_frame_capture() {
     assert(rdocApi);
-    rdocApi->EndFrameCapture(nullptr, nullptr);
+    // NOLINTNEXTLINE (google-readability-casting)
+    rdocApi->EndFrameCapture(RENDERDOC_DEVICEPOINTER_FROM_VKINSTANCE(mgr.getVkInstance().get()), nullptr);
 }
 
 #endif
