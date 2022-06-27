@@ -107,7 +107,7 @@ void Simulator::sim_worker() {
     std::shared_ptr<kp::Sequence> sendSeq = mgr.sequence()->record<kp::OpTensorSyncDevice>(params);
     sendSeq->evalAsync();
     std::shared_ptr<kp::Sequence> calcSeq = mgr.sequence()->record<kp::OpAlgoDispatch>(algo);
-    std::shared_ptr<kp::Sequence> retrieveSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>(params);
+    std::shared_ptr<kp::Sequence> retrieveSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>({tensorEntities});
     sendSeq->evalAwait();
 
     // Make sure we have started receiving once:
