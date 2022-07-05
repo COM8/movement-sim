@@ -52,6 +52,8 @@ class Simulator {
 
     std::shared_ptr<std::vector<Entity>> entities;
     std::shared_ptr<kp::Tensor> tensorEntities{nullptr};
+    std::shared_ptr<kp::Tensor> tensorConnections{nullptr};
+    std::shared_ptr<kp::Tensor> tensorRoads{nullptr};
 
     std::shared_ptr<Map> map{nullptr};
 

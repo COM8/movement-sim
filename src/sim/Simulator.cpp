@@ -37,18 +37,18 @@ void Simulator::init() {
 
     add_entities();
     tensorEntities = mgr.tensor(entities->data(), entities->size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eDouble);
-    params = {tensorEntities};
+    tensorRoads = mgr.tensor(map->roads.data(), map->roads.size(), sizeof(Road), kp::Tensor::TensorDataTypes::eDouble);
+    tensorRoads->setDescriptorType(vk::DescriptorType::eUniformBuffer);
+    tensorConnections = mgr.tensorT(map->connections);
+    tensorConnections->setDescriptorType(vk::DescriptorType::eUniformBuffer);
+    params = {tensorEntities, tensorRoads, tensorConnections};
 
     // Prepare push constants:
-    std::unique_ptr<PushConsts> pushConsts = std::make_unique<PushConsts>();
-    pushConsts->worldSizeX = map->width;
-    pushConsts->worldSizeY = map->height;
-    assert(map->roads.size() == pushConsts->roads.size());
-    std::copy_n(map->roads.begin(), map->roads.size(), pushConsts->roads.begin());
-    assert(map->connections.size() == pushConsts->connections.size());
-    std::copy_n(map->connections.begin(), map->connections.size(), pushConsts->connections.begin());
+    PushConsts pushConsts{};
+    pushConsts.worldSizeX = map->width;
+    pushConsts.worldSizeY = map->height;
 
-    algo = mgr.algorithm<float, PushConsts>(params, shader, kp::Workgroup({1}), {}, {*pushConsts});
+    algo = mgr.algorithm<float, PushConsts>(params, shader, kp::Workgroup({1}), {}, {pushConsts});
 
     initialized = true;
 }
@@ -167,7 +167,7 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
         //     assert(e.target.x >= 0 && e.target.x <= WORLD_SIZE_X);
         //     assert(e.target.y >= 0 && e.target.y <= WORLD_SIZE_Y);
         // }
-        /*assert(!entities->empty());
+        assert(!entities->empty());
         float posX = (*entities)[0].pos.x;
         float posY = (*entities)[0].pos.y;
         float targetX = (*entities)[0].target.x;
@@ -175,7 +175,7 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
         float directionX = (*entities)[0].direction.x;
         float directionY = (*entities)[0].direction.y;
         unsigned int roadIndex = (*entities)[0].roadIndex;
-        SPDLOG_INFO("Pos: {}/{}, Target: {}/{}, Direction: {}/{}, Road Index: {}", posX, posY, targetX, targetY, directionX, directionY, roadIndex);*/
+        SPDLOG_INFO("Pos: {}/{}, Target: {}/{}, Direction: {}/{}, Road Index: {}", posX, posY, targetX, targetY, directionX, directionY, roadIndex);
     }
 
     std::chrono::high_resolution_clock::time_point tickEnd = std::chrono::high_resolution_clock::now();

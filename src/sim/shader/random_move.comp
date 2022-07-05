@@ -1,5 +1,10 @@
 #version 450
 
+// Ensure we have a compact layout for uniform arrays.
+// Else we would have to pass multiples of sizeof(vec4) when binding.
+// Source: https://www.reddit.com/r/vulkan/comments/u5jiws/comment/i575o3i/?utm_source=share&utm_medium=web2x&context=3
+#extension GL_EXT_scalar_block_layout : require
+
 layout (local_size_x = 1) in;
 
 struct EntityDescriptor {
@@ -28,11 +33,12 @@ struct RoadDescriptor {
 layout(push_constant) uniform PushConstants {
 	float worldSizeX;
 	float worldSizeY;
-    uint connections[289347];
-    RoadDescriptor roads[96449];
 } pushConsts;
 
 layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
+
+layout(set = 0, binding = 1, std430) uniform bufRoads { RoadDescriptor roads[96449]; };
+layout(set = 0, binding = 2, std430) uniform bufConnections { uint connections[289347]; };
 
 precision highp float;
 
@@ -107,7 +113,7 @@ void new_target(uint index) {
     // return;
 
     // Get current road:
-    RoadDescriptor curRoad = pushConsts.roads[entities[index].roadIndex];
+    RoadDescriptor curRoad = roads[entities[index].roadIndex];
     CoordinateDescriptor curCoord;
     // Get current coordinate:
     if(entities[index].target == curRoad.start.pos) {
@@ -130,16 +136,16 @@ void new_target(uint index) {
     uint newRoadIndex = -1;
     // Only one alternative available? Select it immediately:
     if(curCoord.connectedCount == 2) {
-        newRoadIndex = pushConsts.connections[curCoord.connectedIndex + 1];
+        newRoadIndex = connections[curCoord.connectedIndex + 1];
     }
     else {
         uint newRoadOffset = uint(nextFloat(entities[index].randSeed, curCoord.connectedCount));
         entities[index].randSeed = nextInt(entities[index].randSeed);
-        newRoadIndex = pushConsts.connections[curCoord.connectedIndex + newRoadOffset];
+        newRoadIndex = connections[curCoord.connectedIndex + newRoadOffset];
     }
 
     // Update the new target:
-    RoadDescriptor newRoad = pushConsts.roads[newRoadIndex];
+    RoadDescriptor newRoad = roads[newRoadIndex];
     if(newRoad.start.pos == entities[index].target) {
         entities[index].target = newRoad.end.pos;
     }
@@ -168,11 +174,11 @@ void update_direction(uint index) {
 }
 
 void move(uint index) {
-    entities[index].roadIndex += 1;
-    RoadDescriptor nextRoad = pushConsts.roads[entities[index].roadIndex];
-    entities[index].target = nextRoad.end.pos;
-    entities[index].pos = nextRoad.start.pos;
-    return;
+    // entities[index].roadIndex += 1;
+    // RoadDescriptor nextRoad = roads[entities[index].roadIndex];
+    // entities[index].target = nextRoad.end.pos;
+    // entities[index].pos = nextRoad.start.pos;
+    // return;
 
     float dist = distance(entities[index].pos, entities[index].target);
 
@@ -204,7 +210,7 @@ void main() {
         // new_target(index);
     }
 
-    // update_direction(index);
+    update_direction(index);
     move(index);
     if(check_collision(index)) {
         // set_random_color(index);
