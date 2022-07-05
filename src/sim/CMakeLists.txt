@@ -7,6 +7,8 @@ add_library(sim Simulator.cpp
                 Entity.cpp
                 Entity.hpp
                 Map.cpp
-                Map.hpp)
+                Map.hpp
+                PushConsts.cpp
+                PushConsts.hpp)
 
 target_link_libraries(sim PRIVATE kompute::kompute logger sim_shader utils nlohmann_json::nlohmann_json ${CMAKE_DL_LIBS})

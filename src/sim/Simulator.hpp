@@ -33,6 +33,8 @@ constexpr float MAX_RENDER_RESOLUTION_Y = 8192;
 
 class Simulator {
  private:
+    bool initialized{false};
+
     std::unique_ptr<std::thread> simThread{nullptr};
     SimulatorState state{SimulatorState::STOPPED};
 
@@ -50,8 +52,6 @@ class Simulator {
 
     std::shared_ptr<std::vector<Entity>> entities;
     std::shared_ptr<kp::Tensor> tensorEntities{nullptr};
-    std::shared_ptr<kp::Tensor> tensorRoads{nullptr};
-    std::shared_ptr<kp::TensorT<unsigned int>> tensorConnections{nullptr};
 
     std::shared_ptr<Map> map{nullptr};
 
@@ -60,13 +60,15 @@ class Simulator {
 #endif
 
  public:
-    Simulator();
+    Simulator() = default;
     ~Simulator() = default;
 
     Simulator(Simulator&&) = delete;
     Simulator(const Simulator&) = delete;
     Simulator& operator=(Simulator&&) = delete;
     Simulator& operator=(const Simulator&) = delete;
+
+    void init();
 
     static std::shared_ptr<Simulator>& get_instance();
     [[nodiscard]] SimulatorState get_state() const;
@@ -80,6 +82,8 @@ class Simulator {
     [[nodiscard]] const utils::TickDurationHistory& get_tps_history() const;
     std::shared_ptr<std::vector<Entity>> get_entities();
     [[nodiscard]] const std::shared_ptr<Map> get_map() const;
+
+    [[nodiscard]] bool is_initialized() const;
 
  private:
     void sim_worker();

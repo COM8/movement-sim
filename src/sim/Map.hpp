@@ -8,11 +8,12 @@
 
 namespace sim {
 struct Coordinate {
-    Vec2 pos;
-    unsigned int connectedIndex;
-    unsigned int connectedCount;
+    Vec2 pos{};
+    unsigned int connectedIndex{};
+    unsigned int connectedCount{};
 
     Coordinate(Vec2 pos, unsigned int connectedIndex, unsigned int connectedCount);
+    Coordinate() = default;
 } __attribute__((aligned(16)));
 
 struct Road {

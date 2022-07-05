@@ -9,9 +9,6 @@ class MapGlObject : public AbstractGlObject {
     GLuint vertShader{0};
     GLuint fragShader{0};
 
-    GLint worldSizeConst{0};
-    GLint rectSizeConst{0};
-
  public:
     MapGlObject() = default;
     MapGlObject(MapGlObject& other) = delete;

@@ -28,11 +28,11 @@ struct RoadDescriptor {
 layout(push_constant) uniform PushConstants {
 	float worldSizeX;
 	float worldSizeY;
+    uint connections[289347];
+    RoadDescriptor roads[96449];
 } pushConsts;
 
 layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
-layout(set = 0, binding = 1) buffer bufRoads { RoadDescriptor roads[]; };
-layout(set = 0, binding = 2) buffer bufConnections { uint connections[]; };
 
 precision highp float;
 
@@ -97,8 +97,17 @@ bool check_collision(uint index) {
 }
 
 void new_target(uint index) {
+    // RoadDescriptor curRoad1 = roads[entities[index].roadIndex];
+    // if(entities[index].target == curRoad1.start.pos)  {
+    //     entities[index].target = curRoad1.end.pos;
+    // }
+    // else {
+    //     entities[index].target = curRoad1.start.pos;
+    // }
+    // return;
+
     // Get current road:
-    RoadDescriptor curRoad = roads[entities[index].roadIndex];
+    RoadDescriptor curRoad = pushConsts.roads[entities[index].roadIndex];
     CoordinateDescriptor curCoord;
     // Get current coordinate:
     if(entities[index].target == curRoad.start.pos) {
@@ -121,16 +130,16 @@ void new_target(uint index) {
     uint newRoadIndex = -1;
     // Only one alternative available? Select it immediately:
     if(curCoord.connectedCount == 2) {
-        newRoadIndex = connections[curCoord.connectedIndex + 1];
+        newRoadIndex = pushConsts.connections[curCoord.connectedIndex + 1];
     }
     else {
         uint newRoadOffset = uint(nextFloat(entities[index].randSeed, curCoord.connectedCount));
         entities[index].randSeed = nextInt(entities[index].randSeed);
-        newRoadIndex = connections[curCoord.connectedIndex + newRoadOffset];
+        newRoadIndex = pushConsts.connections[curCoord.connectedIndex + newRoadOffset];
     }
 
     // Update the new target:
-    RoadDescriptor newRoad = roads[newRoadIndex];
+    RoadDescriptor newRoad = pushConsts.roads[newRoadIndex];
     if(newRoad.start.pos == entities[index].target) {
         entities[index].target = newRoad.end.pos;
     }
@@ -159,6 +168,12 @@ void update_direction(uint index) {
 }
 
 void move(uint index) {
+    entities[index].roadIndex += 1;
+    RoadDescriptor nextRoad = pushConsts.roads[entities[index].roadIndex];
+    entities[index].target = nextRoad.end.pos;
+    entities[index].pos = nextRoad.start.pos;
+    return;
+
     float dist = distance(entities[index].pos, entities[index].target);
 
     if(dist > SPEED) {
@@ -189,7 +204,7 @@ void main() {
         // new_target(index);
     }
 
-    update_direction(index);
+    // update_direction(index);
     move(index);
     if(check_collision(index)) {
         // set_random_color(index);

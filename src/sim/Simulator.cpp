@@ -5,7 +5,9 @@
 #include "random_move.hpp"
 #include "sim/Entity.hpp"
 #include "sim/Map.hpp"
+#include "sim/PushConsts.hpp"
 #include "spdlog/spdlog.h"
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <cstddef>
@@ -20,8 +22,9 @@
 #endif
 
 namespace sim {
+void Simulator::init() {
+    assert(!initialized);
 
-Simulator::Simulator() {
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
     // Init RenderDoc:
     init_renderdoc();
@@ -34,10 +37,24 @@ Simulator::Simulator() {
 
     add_entities();
     tensorEntities = mgr.tensor(entities->data(), entities->size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eDouble);
-    tensorRoads = mgr.tensor(map->roads.data(), map->roads.size(), sizeof(Road), kp::Tensor::TensorDataTypes::eDouble);
-    tensorConnections = mgr.tensorT(map->connections);
-    params = {tensorEntities, tensorRoads, tensorConnections};
-    algo = mgr.algorithm(params, shader, {}, {}, std::vector<float>{map->width, map->height});
+    params = {tensorEntities};
+
+    // Prepare push constants:
+    std::unique_ptr<PushConsts> pushConsts = std::make_unique<PushConsts>();
+    pushConsts->worldSizeX = map->width;
+    pushConsts->worldSizeY = map->height;
+    assert(map->roads.size() == pushConsts->roads.size());
+    std::copy_n(map->roads.begin(), map->roads.size(), pushConsts->roads.begin());
+    assert(map->connections.size() == pushConsts->connections.size());
+    std::copy_n(map->connections.begin(), map->connections.size(), pushConsts->connections.begin());
+
+    algo = mgr.algorithm<float, PushConsts>(params, shader, kp::Workgroup({1}), {}, {*pushConsts});
+
+    initialized = true;
+}
+
+bool Simulator::is_initialized() const {
+    return initialized;
 }
 
 void Simulator::add_entities() {
@@ -59,6 +76,9 @@ void Simulator::add_entities() {
 
 std::shared_ptr<Simulator>& Simulator::get_instance() {
     static std::shared_ptr<Simulator> instance = std::make_shared<Simulator>();
+    if (!instance->is_initialized()) {
+        instance->init();
+    }
     return instance;
 }
 
@@ -77,6 +97,7 @@ const std::shared_ptr<Map> Simulator::get_map() const {
 }
 
 void Simulator::start_worker() {
+    assert(initialized);
     assert(state == SimulatorState::STOPPED);
     assert(!simThread);
 
@@ -86,6 +107,7 @@ void Simulator::start_worker() {
 }
 
 void Simulator::stop_worker() {
+    assert(initialized);
     assert(state == SimulatorState::RUNNING);
     assert(simThread);
 
@@ -101,6 +123,7 @@ void Simulator::stop_worker() {
 }
 
 void Simulator::sim_worker() {
+    assert(initialized);
     SPDLOG_INFO("Simulation thread started.");
 
     // Ensure the data is on the GPU:
@@ -132,6 +155,7 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
     start_frame_capture();
 #endif
     calcSeq->eval();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
     end_frame_capture();
 #endif
@@ -143,13 +167,15 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
         //     assert(e.target.x >= 0 && e.target.x <= WORLD_SIZE_X);
         //     assert(e.target.y >= 0 && e.target.y <= WORLD_SIZE_Y);
         // }
-        /*float posX = (*entities)[0].pos.x;
+        /*assert(!entities->empty());
+        float posX = (*entities)[0].pos.x;
         float posY = (*entities)[0].pos.y;
         float targetX = (*entities)[0].target.x;
         float targetY = (*entities)[0].target.y;
         float directionX = (*entities)[0].direction.x;
         float directionY = (*entities)[0].direction.y;
-        SPDLOG_INFO("Pos: {}/{}, Target: {}/{}, Direction: {}/{}", posX, posY, targetX, targetY, directionX, directionY);*/
+        unsigned int roadIndex = (*entities)[0].roadIndex;
+        SPDLOG_INFO("Pos: {}/{}, Target: {}/{}, Direction: {}/{}, Road Index: {}", posX, posY, targetX, targetY, directionX, directionY, roadIndex);*/
     }
 
     std::chrono::high_resolution_clock::time_point tickEnd = std::chrono::high_resolution_clock::now();
