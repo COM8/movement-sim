@@ -8,15 +8,17 @@
 layout (local_size_x = 1) in;
 
 struct EntityDescriptor {
-    vec3 color;
-    float padding1;
+    vec4 color;
     vec2 pos;
     vec2 target;
     vec2 direction;
     int randSeed;
-    bool initialized;
     uint roadIndex;
-    vec3 padding2; // Make sure we are alligned to 64 bytes like the original entity
+    bool initialized;
+    // Not required some how since it's alligned to a multiple of 4 anyway...
+    // float padding0; // Make sure we are alligned to 64 bytes like the original entity
+    // float padding1;
+    // float padding2;
 };
 
 struct CoordinateDescriptor {
@@ -35,7 +37,7 @@ layout(push_constant) uniform PushConstants {
 	float worldSizeY;
 } pushConsts;
 
-layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
+layout(set = 0, binding = 0, std430) buffer bufEntity { EntityDescriptor entities[]; };
 
 layout(set = 0, binding = 1, std430) uniform bufRoads { RoadDescriptor roads[96449]; };
 layout(set = 0, binding = 2, std430) uniform bufConnections { uint connections[289347]; };
@@ -103,14 +105,14 @@ bool check_collision(uint index) {
 }
 
 void new_target(uint index) {
-    // RoadDescriptor curRoad1 = roads[entities[index].roadIndex];
-    // if(entities[index].target == curRoad1.start.pos)  {
-    //     entities[index].target = curRoad1.end.pos;
-    // }
-    // else {
-    //     entities[index].target = curRoad1.start.pos;
-    // }
-    // return;
+    RoadDescriptor curRoad1 = roads[entities[index].roadIndex];
+    if(entities[index].target == curRoad1.start.pos)  {
+        entities[index].target = curRoad1.end.pos;
+    }
+    else {
+        entities[index].target = curRoad1.start.pos;
+    }
+    return;
 
     // Get current road:
     RoadDescriptor curRoad = roads[entities[index].roadIndex];
@@ -205,14 +207,24 @@ void move(uint index) {
 void main() {
     uint index = gl_GlobalInvocationID.x;
 
+    vec2 oldPos = entities[index].pos;
+
     if(!entities[index].initialized) {
         entities[index].initialized = true;
-        // new_target(index);
+        // entities[index].roadIndex = 0;
     }
+
+    // entities[index].pos = roads[entities[index].roadIndex].start.pos;
+    // entities[index].roadIndex += 1;
+    // return;
 
     update_direction(index);
     move(index);
     if(check_collision(index)) {
         // set_random_color(index);
+    }
+
+    if(oldPos == entities[index].pos) {
+        entities[index].pos = vec2(1000);
     }
 }

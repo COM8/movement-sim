@@ -6,8 +6,8 @@ uniform vec2 rectSize;
 layout(points) in;
 layout(triangle_strip, max_vertices = 4) out;
 
-in vec3 gColor[];
-out vec3 fColor;
+in vec4 gColor[];
+out vec4 fColor;
 
 // Normalize to range [-1, 1]:
 vec2 normalize_position(vec2 pos)  {
