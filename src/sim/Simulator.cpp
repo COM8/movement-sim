@@ -35,15 +35,19 @@ void Simulator::init() {
 
     shader = std::vector(RANDOM_MOVE_COMP_SPV.begin(), RANDOM_MOVE_COMP_SPV.end());
 
+    // Entities:
     add_entities();
     tensorEntities = mgr.tensor(entities->data(), entities->size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eDouble);
+
+    // Uniform data:
     tensorRoads = mgr.tensor(map->roads.data(), map->roads.size(), sizeof(Road), kp::Tensor::TensorDataTypes::eDouble);
     tensorRoads->setDescriptorType(vk::DescriptorType::eUniformBuffer);
     tensorConnections = mgr.tensorT(map->connections);
     tensorConnections->setDescriptorType(vk::DescriptorType::eUniformBuffer);
+
     params = {tensorEntities, tensorRoads, tensorConnections};
 
-    // Prepare push constants:
+    // Push constants:
     PushConsts pushConsts{};
     pushConsts.worldSizeX = map->width;
     pushConsts.worldSizeY = map->height;
@@ -155,7 +159,7 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
     start_frame_capture();
 #endif
     calcSeq->eval();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // std::this_thread::sleep_for(std::chrono::milliseconds(100));
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
     end_frame_capture();
 #endif
@@ -167,7 +171,7 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
         //     assert(e.target.x >= 0 && e.target.x <= WORLD_SIZE_X);
         //     assert(e.target.y >= 0 && e.target.y <= WORLD_SIZE_Y);
         // }
-        assert(!entities->empty());
+        /*assert(!entities->empty());
         float posX = (*entities)[0].pos.x;
         float posY = (*entities)[0].pos.y;
         float targetX = (*entities)[0].target.x;
@@ -175,7 +179,7 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
         float directionX = (*entities)[0].direction.x;
         float directionY = (*entities)[0].direction.y;
         unsigned int roadIndex = (*entities)[0].roadIndex;
-        SPDLOG_INFO("Pos: {}/{}, Target: {}/{}, Direction: {}/{}, Road Index: {}", posX, posY, targetX, targetY, directionX, directionY, roadIndex);
+        SPDLOG_INFO("Pos: {}/{}, Target: {}/{}, Direction: {}/{}, Road Index: {}", posX, posY, targetX, targetY, directionX, directionY, roadIndex);*/
     }
 
     std::chrono::high_resolution_clock::time_point tickEnd = std::chrono::high_resolution_clock::now();
