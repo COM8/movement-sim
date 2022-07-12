@@ -99,9 +99,10 @@ FetchContent_MakeAvailable(spdlog)
 
 set(KOMPUTE_OPT_DISABLE_VK_DEBUG_LAYERS ON) # Version clash since they are not properly supported on my GPU.
 set(KOMPUTE_OPT_USE_BUILD_IN_VULKAN_HEADER OFF)
+set(KOMPUTE_OPT_BUILD_SHADERS ON)
 set(KOMPUTE_OPT_LOG_LEVEL "Off")
 FetchContent_Declare(kompute GIT_REPOSITORY https://github.com/COM8/kompute.git
-                             GIT_TAG 51460e7dc39a70e4b4d6dbdfce7615ad21506e9f)
+                             GIT_TAG 8ba946524725a6eb033a1c830321e65e17bd7749)
 FetchContent_MakeAvailable(kompute)
 include_directories(${kompute_SOURCE_DIR}/src/include)
 
