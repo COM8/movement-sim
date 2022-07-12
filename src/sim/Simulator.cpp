@@ -52,7 +52,7 @@ void Simulator::init() {
     pushConsts.worldSizeX = map->width;
     pushConsts.worldSizeY = map->height;
 
-    algo = mgr.algorithm<float, PushConsts>(params, shader, kp::Workgroup({1}), {}, {pushConsts});
+    algo = mgr.algorithm<float, PushConsts>(params, shader, {}, {}, {pushConsts});
 
     initialized = true;
 }
@@ -172,13 +172,13 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
         //     assert(e.target.y >= 0 && e.target.y <= WORLD_SIZE_Y);
         // }
         /*assert(!entities->empty());
-        float posX = (*entities)[0].pos.x;
-        float posY = (*entities)[0].pos.y;
-        float targetX = (*entities)[0].target.x;
-        float targetY = (*entities)[0].target.y;
-        float directionX = (*entities)[0].direction.x;
-        float directionY = (*entities)[0].direction.y;
-        unsigned int roadIndex = (*entities)[0].roadIndex;
+        float posX = (*entities)[1].pos.x;
+        float posY = (*entities)[1].pos.y;
+        float targetX = (*entities)[1].target.x;
+        float targetY = (*entities)[1].target.y;
+        float directionX = (*entities)[1].direction.x;
+        float directionY = (*entities)[1].direction.y;
+        unsigned int roadIndex = (*entities)[1].roadIndex;
         SPDLOG_INFO("Pos: {}/{}, Target: {}/{}, Direction: {}/{}, Road Index: {}", posX, posY, targetX, targetY, directionX, directionY, roadIndex);*/
     }
 
