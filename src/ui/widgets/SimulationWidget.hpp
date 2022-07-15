@@ -36,6 +36,7 @@ class SimulationWidget : public Gtk::ScrolledWindow {
     opengl::fb::MapFrameBuffer mapFrameBuffer;
     opengl::fb::EntitiesFrameBuffer entitiesFrameBuffer;
     bool mapRendered{false};
+    bool blur{false};
 
     Gtk::GLArea glArea;
     float zoomFactor{1};
@@ -50,6 +51,8 @@ class SimulationWidget : public Gtk::ScrolledWindow {
 
     void set_zoom_factor(float zoomFactor);
     [[nodiscard]] float get_zoom_factor() const;
+
+    void set_blur(bool blur);
 
  private:
     void prep_widget();

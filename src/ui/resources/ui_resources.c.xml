@@ -21,5 +21,6 @@
     <file preprocess="xml-stripblanks">icons/scalable/action/pencil-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/action/play-large-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/action/test-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/action/blur-symbolic.svg</file>
   </gresource>
 </gresources>

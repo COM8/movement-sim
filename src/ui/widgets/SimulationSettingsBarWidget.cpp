@@ -26,6 +26,10 @@ void SimulationSettingsBarWidget::prep_widget() {
     zoomBox.set_margin_start(10);
     append(zoomBox);
 
+    miscBox.add_css_class("linked");
+    miscBox.set_margin_start(10);
+    append(miscBox);
+
     simulateTBtn.property_active().signal_changed().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_simulate_toggled));
     simulateTBtn.set_icon_name("play-large-symbolic");
     simulateTBtn.set_tooltip_text("Enable simulation");
@@ -71,6 +75,12 @@ void SimulationSettingsBarWidget::prep_widget() {
     zoomResetBtn.set_tooltip_text("Zoom reset");
     zoomResetBtn.set_icon_name("zoom-original");
     zoomBox.append(zoomResetBtn);
+
+    blurTBtn.property_active().signal_changed().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_blur_toggled));
+    blurTBtn.set_icon_name("blur-symbolic");
+    blurTBtn.set_margin_start(10);
+    blurTBtn.set_tooltip_text("Blur entities");
+    miscBox.append(blurTBtn);
 }
 
 //-----------------------------Events:-----------------------------
@@ -128,5 +138,10 @@ void SimulationSettingsBarWidget::on_zoom_fit_clicked() {
     zoomFactor = zoomX > zoomY ? zoomY : zoomX;
     simWidget->set_zoom_factor(zoomFactor);
     zoomInBtn.set_sensitive(true);
+}
+
+void SimulationSettingsBarWidget::on_blur_toggled() {
+    assert(simWidget);
+    simWidget->set_blur(blurTBtn.get_active());
 }
 }  // namespace ui::widgets

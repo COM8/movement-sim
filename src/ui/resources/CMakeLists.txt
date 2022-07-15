@@ -21,4 +21,5 @@ set(RESOURCE_DEPS ${CMAKE_CURRENT_SOURCE_DIR}/theme.css
     ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/pause-large-symbolic.svg
     ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/pencil-symbolic.svg
     ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/play-large-symbolic.svg
-    ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/test-symbolic.svg PARENT_SCOPE)
+    ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/test-symbolic.svg
+    ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/blur-symbolic.svg PARENT_SCOPE)

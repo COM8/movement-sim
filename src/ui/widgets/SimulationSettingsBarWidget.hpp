@@ -17,6 +17,7 @@ class SimulationSettingsBarWidget : public Gtk::Box {
 
     Gtk::Box mainBox;
     Gtk::Box zoomBox;
+    Gtk::Box miscBox;
 
     Gtk::ToggleButton simulateTBtn;
     Gtk::ToggleButton renderTBtn;
@@ -26,6 +27,8 @@ class SimulationSettingsBarWidget : public Gtk::Box {
     Gtk::Button zoomOutBtn;
     Gtk::Button zoomResetBtn;
     Gtk::Button zoomFitBtn;
+
+    Gtk::ToggleButton blurTBtn;
 
     std::shared_ptr<sim::Simulator> simulator{nullptr};
 
@@ -43,5 +46,6 @@ class SimulationSettingsBarWidget : public Gtk::Box {
     void on_zoom_out_clicked();
     void on_zoom_reset_clicked();
     void on_zoom_fit_clicked();
+    void on_blur_toggled();
 };
 }  // namespace ui::widgets

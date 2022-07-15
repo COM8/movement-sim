@@ -68,6 +68,10 @@ float SimulationWidget::get_zoom_factor() const {
     return zoomFactor;
 }
 
+void SimulationWidget::set_blur(bool blur) {
+    this->blur = blur;
+}
+
 //-----------------------------Events:-----------------------------
 bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*ctx*/) {
     assert(simulator);
@@ -115,12 +119,13 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
         if (entitiesChanged) {
             entitiesFrameBuffer.bind();
             // 2.1 Blur old entities:
-            blurObject.render();
-
-            // For now, we just clear them instead of blurring them:
-            // glClearColor(0, 0, 0, 0);
-            // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-            // GLERR;
+            if (blur) {
+                blurObject.render();
+            } else {
+                glClearColor(0, 0, 0, 0);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+                GLERR;
+            }
 
             // 2.2 Draw entities:
             entityObj.set_entities(this->entities);
