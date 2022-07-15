@@ -105,14 +105,14 @@ bool check_collision(uint index) {
 }
 
 void new_target(uint index) {
-    RoadDescriptor curRoad1 = roads[entities[index].roadIndex];
-    if(entities[index].target == curRoad1.start.pos)  {
-        entities[index].target = curRoad1.end.pos;
-    }
-    else {
-        entities[index].target = curRoad1.start.pos;
-    }
-    return;
+    // RoadDescriptor curRoad1 = roads[entities[index].roadIndex];
+    // if(entities[index].target == curRoad1.start.pos)  {
+    //     entities[index].target = curRoad1.end.pos;
+    // }
+    // else {
+    //     entities[index].target = curRoad1.start.pos;
+    // }
+    // return;
 
     // Get current road:
     RoadDescriptor curRoad = roads[entities[index].roadIndex];
@@ -176,7 +176,7 @@ void update_direction(uint index) {
 }
 
 void move(uint index) {
-    // entities[index].roadIndex += 1;
+    // entities[index].roadIndex += 10;
     // RoadDescriptor nextRoad = roads[entities[index].roadIndex];
     // entities[index].target = nextRoad.end.pos;
     // entities[index].pos = nextRoad.start.pos;
@@ -207,24 +207,13 @@ void move(uint index) {
 void main() {
     uint index = gl_GlobalInvocationID.x;
 
-    vec2 oldPos = entities[index].pos;
-
     if(!entities[index].initialized) {
         entities[index].initialized = true;
-        // entities[index].roadIndex = 0;
     }
-
-    // entities[index].pos = roads[entities[index].roadIndex].start.pos;
-    // entities[index].roadIndex += 1;
-    // return;
 
     update_direction(index);
     move(index);
     if(check_collision(index)) {
         // set_random_color(index);
-    }
-
-    if(oldPos == entities[index].pos) {
-        entities[index].pos = vec2(1000);
     }
 }
