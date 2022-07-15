@@ -51,4 +51,12 @@ void AbstractGlFrameBuffer::cleanup() {
 GLuint AbstractGlFrameBuffer::get_texture() const {
     return fbufTexture;
 }
+
+GLsizei AbstractGlFrameBuffer::get_texture_size_x() const {
+    return sizeX;
+}
+
+GLsizei AbstractGlFrameBuffer::get_texture_size_y() const {
+    return sizeY;
+}
 }  // namespace ui::widgets::opengl::fb

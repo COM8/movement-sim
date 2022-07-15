@@ -1,4 +1,4 @@
-#version 400 core
+#version 460 core
 
 uniform vec2 worldSize;
 uniform vec2 rectSize;

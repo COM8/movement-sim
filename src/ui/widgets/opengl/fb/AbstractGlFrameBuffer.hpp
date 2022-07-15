@@ -34,5 +34,7 @@ class AbstractGlFrameBuffer {
     void cleanup();
 
     [[nodiscard]] GLuint get_texture() const;
+    [[nodiscard]] GLsizei get_texture_size_x() const;
+    [[nodiscard]] GLsizei get_texture_size_y() const;
 };
 }  // namespace ui::widgets::opengl::fb

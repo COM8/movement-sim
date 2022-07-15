@@ -2,6 +2,7 @@
 
 #include "AbstractGlObject.hpp"
 #include <array>
+#include <cstddef>
 #include <epoxy/gl.h>
 #include <epoxy/gl_generated.h>
 #include <gtkmm/glarea.h>
@@ -14,6 +15,9 @@ class BlurGlObject : public AbstractGlObject {
     GLuint fragShader{0};
 
     GLuint inputTexture{0};
+    GLsizei inputTextureSizeX{0};
+    GLsizei inputTextureSizeY{0};
+    GLuint offsetsUBO{0};
 
  public:
     BlurGlObject() = default;
@@ -26,6 +30,7 @@ class BlurGlObject : public AbstractGlObject {
     BlurGlObject& operator=(BlurGlObject&& old) = delete;
 
     void bind_texture(GLuint inputTexture);
+    void set_texture_size(GLsizei sizeX, GLsizei sizeY);
 
  protected:
     void init_internal() override;

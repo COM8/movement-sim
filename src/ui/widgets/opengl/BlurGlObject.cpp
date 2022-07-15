@@ -1,12 +1,18 @@
 
 #include "BlurGlObject.hpp"
 #include "sim/Entity.hpp"
+#include <array>
 #include <cassert>
 #include <epoxy/gl_generated.h>
 
 namespace ui::widgets::opengl {
 void BlurGlObject::bind_texture(GLuint inputTexture) {
     this->inputTexture = inputTexture;
+}
+
+void BlurGlObject::set_texture_size(GLsizei sizeX, GLsizei sizeY) {
+    inputTextureSizeX = sizeX;
+    inputTextureSizeY = sizeY;
 }
 
 void BlurGlObject::init_internal() {
@@ -22,6 +28,7 @@ void BlurGlObject::init_internal() {
     glAttachShader(shaderProg, vertShader);
     glAttachShader(shaderProg, geomShader);
     glAttachShader(shaderProg, fragShader);
+    glBindFragDataLocation(shaderProg, 0, "outColor");
     glLinkProgram(shaderProg);
     GLERR;
 
@@ -48,6 +55,23 @@ void BlurGlObject::init_internal() {
     // Bind attributes:
     glUseProgram(shaderProg);
     glUniform1i(glGetUniformLocation(shaderProg, "inputTexture"), 0);
+
+    // Bind uniform offsets buffer:
+    glGenBuffers(1, &offsetsUBO);
+    glBindBuffer(GL_UNIFORM_BUFFER, offsetsUBO);
+    GLERR;
+    assert(inputTextureSizeX > 0);
+    assert(inputTextureSizeY > 0);
+    float stepX = 1 / static_cast<float>(inputTextureSizeX);
+    float stepY = 1 / static_cast<float>(inputTextureSizeY);
+    std::array<sim::Vec2, 9> data{{{-stepX, -stepY}, {0, -stepY}, {stepX, -stepY}, {-stepX, 0}, {0, 0}, {stepX, 0}, {-stepX, stepY}, {0, stepY}, {stepX, stepY}}};
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(sim::Vec2) * data.size(), data.data(), GL_STATIC_DRAW);
+    GLERR;
+    GLuint offsetsIndex = glGetUniformBlockIndex(shaderProg, "blurArrayBlock");
+    GLERR;
+    glUniformBlockBinding(shaderProg, offsetsIndex, 0);
+    GLERR;
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, offsetsUBO);
     GLERR;
 }
 
