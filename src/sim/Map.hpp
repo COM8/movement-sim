@@ -14,17 +14,17 @@ struct Coordinate {
 
     Coordinate(Vec2 pos, unsigned int connectedIndex, unsigned int connectedCount);
     Coordinate() = default;
-} __attribute__((aligned(16)));
+} __attribute__((aligned(16))) __attribute__((__packed__));
 
 struct Road {
     Coordinate start;
     Coordinate end;
-} __attribute__((aligned(32)));
+} __attribute__((aligned(32))) __attribute__((__packed__));
 
 struct RoadCompact {
     Vec2 start;
     Vec2 end;
-} __attribute__((aligned(16)));
+} __attribute__((aligned(16))) __attribute__((__packed__));
 
 class Map {
  public:
