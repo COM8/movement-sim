@@ -78,7 +78,6 @@ void SimulationSettingsBarWidget::prep_widget() {
 
     blurTBtn.property_active().signal_changed().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_blur_toggled));
     blurTBtn.set_icon_name("blur-symbolic");
-    blurTBtn.set_margin_start(10);
     blurTBtn.set_tooltip_text("Blur entities");
     miscBox.append(blurTBtn);
 }
