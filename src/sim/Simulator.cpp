@@ -41,11 +41,9 @@ void Simulator::init() {
 
     // Uniform data:
     tensorRoads = mgr.tensor(map->roads.data(), map->roads.size(), sizeof(Road), kp::Tensor::TensorDataTypes::eDouble);
-    tensorRoads->setDescriptorType(vk::DescriptorType::eUniformBuffer);
-    tensorConnections = mgr.tensorT(map->connections);
-    tensorConnections->setDescriptorType(vk::DescriptorType::eUniformBuffer);
+    tensorConnections = mgr.tensor(map->connections.data(), map->connections.size(), sizeof(unsigned int), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
-    params = {tensorEntities, tensorRoads, tensorConnections};
+    params = {tensorEntities, tensorConnections, tensorRoads};
 
     // Push constants:
     PushConsts pushConsts{};
@@ -172,14 +170,17 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
         //     assert(e.target.y >= 0 && e.target.y <= WORLD_SIZE_Y);
         // }
         /*assert(!entities->empty());
-        float posX = (*entities)[1].pos.x;
-        float posY = (*entities)[1].pos.y;
-        float targetX = (*entities)[1].target.x;
-        float targetY = (*entities)[1].target.y;
-        float directionX = (*entities)[1].direction.x;
-        float directionY = (*entities)[1].direction.y;
-        unsigned int roadIndex = (*entities)[1].roadIndex;
-        SPDLOG_INFO("Pos: {}/{}, Target: {}/{}, Direction: {}/{}, Road Index: {}", posX, posY, targetX, targetY, directionX, directionY, roadIndex);*/
+        for (size_t i = 0; i < 5; i++) {
+            float posX = (*entities)[i].pos.x;
+            float posY = (*entities)[i].pos.y;
+            float targetX = (*entities)[i].target.x;
+            float targetY = (*entities)[i].target.y;
+            float directionX = (*entities)[i].direction.x;
+            float directionY = (*entities)[i].direction.y;
+            unsigned int roadIndex = (*entities)[i].roadIndex;
+            int randSeed = (*entities)[i].randomSeed;
+            SPDLOG_INFO("Pos: {}/{}, Target: {}/{}, Direction: {}/{}, Road Index: {}, Rand Seed: {}", posX, posY, targetX, targetY, directionX, directionY, roadIndex, randSeed);
+        }*/
     }
 
     std::chrono::high_resolution_clock::time_point tickEnd = std::chrono::high_resolution_clock::now();

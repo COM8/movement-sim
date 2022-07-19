@@ -1,25 +1,16 @@
 #version 450
 
-// Ensure we have a compact layout for uniform arrays.
-// Else we would have to pass multiples of sizeof(vec4) when binding.
-// Source: https://www.reddit.com/r/vulkan/comments/u5jiws/comment/i575o3i/?utm_source=share&utm_medium=web2x&context=3
-#extension GL_EXT_scalar_block_layout : require
-
 layout (local_size_x = 1) in;
 
 struct EntityDescriptor {
-    vec4 color;
-    vec2 pos;
-    vec2 target;
-    vec2 direction;
-    int randSeed;
-    uint roadIndex;
-    bool initialized;
-    // Not required some how since it's alligned to a multiple of 4 anyway...
-    // float padding0; // Make sure we are alligned to 64 bytes like the original entity
-    // float padding1;
-    // float padding2;
-};
+    vec4 color; // Offset: 0-15
+    vec2 pos; // Offset: 16-23
+    vec2 target; // Offset: 24-31
+    vec2 direction; // Offset: 32-39
+    int randSeed;  // Offset: 40-44
+    uint roadIndex; // Offset: 44-47
+    bool initialized; // Offset: 48-51
+}; // Size will be rounded up to the next multiple of the largest member (vec4) -> 64 Bytes
 
 struct CoordinateDescriptor {
     vec2 pos;
@@ -37,10 +28,10 @@ layout(push_constant) uniform PushConstants {
 	float worldSizeY;
 } pushConsts;
 
-layout(set = 0, binding = 0, std430) buffer bufEntity { EntityDescriptor entities[]; };
+layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
 
-layout(set = 0, binding = 1, std430) uniform bufRoads { RoadDescriptor roads[96449]; };
-layout(set = 0, binding = 2, std430) uniform bufConnections { uint connections[289347]; };
+layout(set = 0, binding = 1, std430) buffer readonly bufConnections { uint connections[289347]; };
+layout(set = 0, binding = 2, std430) buffer readonly bufRoads { RoadDescriptor roads[96449]; };
 
 precision highp float;
 
@@ -105,15 +96,6 @@ bool check_collision(uint index) {
 }
 
 void new_target(uint index) {
-    // RoadDescriptor curRoad1 = roads[entities[index].roadIndex];
-    // if(entities[index].target == curRoad1.start.pos)  {
-    //     entities[index].target = curRoad1.end.pos;
-    // }
-    // else {
-    //     entities[index].target = curRoad1.start.pos;
-    // }
-    // return;
-
     // Get current road:
     RoadDescriptor curRoad = roads[entities[index].roadIndex];
     CoordinateDescriptor curCoord;
@@ -176,12 +158,6 @@ void update_direction(uint index) {
 }
 
 void move(uint index) {
-    // entities[index].roadIndex += 10;
-    // RoadDescriptor nextRoad = roads[entities[index].roadIndex];
-    // entities[index].target = nextRoad.end.pos;
-    // entities[index].pos = nextRoad.start.pos;
-    // return;
-
     float dist = distance(entities[index].pos, entities[index].target);
 
     if(dist > SPEED) {
