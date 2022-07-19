@@ -103,7 +103,7 @@ void new_target(uint index) {
     if(entities[index].target == curRoad.start.pos) {
         curCoord = curRoad.start;
         // Just turn around in case there are no other connected roads:
-        if(curCoord.connectedCount <= 1) {
+        if(curCoord.connectedCount < 1) {
             entities[index].target = curRoad.end.pos;
             return;
         }
@@ -111,7 +111,7 @@ void new_target(uint index) {
     else {
         curCoord = curRoad.end;
         // Just turn around in case there are no other connected roads:
-        if(curCoord.connectedCount <= 1) {
+        if(curCoord.connectedCount < 1) {
             entities[index].target = curRoad.start.pos;
             return;
         }
@@ -119,11 +119,11 @@ void new_target(uint index) {
 
     uint newRoadIndex = -1;
     // Only one alternative available? Select it immediately:
-    if(curCoord.connectedCount == 2) {
-        newRoadIndex = connections[curCoord.connectedIndex + 2];
+    if(curCoord.connectedCount == 1) {
+        newRoadIndex = connections[curCoord.connectedIndex + 1];
     }
     else {
-        uint newRoadOffset = 1 + uint(nextFloat(entities[index].randSeed, curCoord.connectedCount - 1));
+        uint newRoadOffset = uint(nextFloat(entities[index].randSeed, curCoord.connectedCount));
         entities[index].randSeed = nextInt(entities[index].randSeed);
         newRoadIndex = connections[curCoord.connectedIndex + newRoadOffset];
     }
