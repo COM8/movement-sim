@@ -120,10 +120,10 @@ void new_target(uint index) {
     uint newRoadIndex = -1;
     // Only one alternative available? Select it immediately:
     if(curCoord.connectedCount == 2) {
-        newRoadIndex = connections[curCoord.connectedIndex + 1];
+        newRoadIndex = connections[curCoord.connectedIndex + 2];
     }
     else {
-        uint newRoadOffset = uint(nextFloat(entities[index].randSeed, curCoord.connectedCount));
+        uint newRoadOffset = 1 + uint(nextFloat(entities[index].randSeed, curCoord.connectedCount - 1));
         entities[index].randSeed = nextInt(entities[index].randSeed);
         newRoadIndex = connections[curCoord.connectedIndex + newRoadOffset];
     }
