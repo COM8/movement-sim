@@ -30,8 +30,8 @@ layout(push_constant) uniform PushConstants {
 
 layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
 
-layout(set = 0, binding = 1, std430) buffer readonly bufConnections { uint connections[289347]; };
-layout(set = 0, binding = 2, std430) buffer readonly bufRoads { RoadDescriptor roads[96449]; };
+layout(set = 0, binding = 1, std430) buffer readonly bufConnections { uint connections[]; };
+layout(set = 0, binding = 2, std430) buffer readonly bufRoads { RoadDescriptor roads[]; };
 
 precision highp float;
 
