@@ -12,6 +12,7 @@ class EntityGlObject : public AbstractGlObject {
     GLuint vertShader{0};
     GLuint geomShader{0};
     GLuint fragShader{0};
+    GLuint computeShader{0};
 
     GLint worldSizeConst{0};
     GLint rectSizeConst{0};
@@ -34,5 +35,7 @@ class EntityGlObject : public AbstractGlObject {
     void init_internal() override;
     void render_internal() override;
     void cleanup_internal() override;
+
+    void init_compute_shader();
 };
 }  // namespace ui::widgets::opengl

@@ -7,6 +7,7 @@ set(RESOURCE_DEPS ${CMAKE_CURRENT_SOURCE_DIR}/theme.css
     ${CMAKE_CURRENT_SOURCE_DIR}/shader/entity/entity.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader/entity/entity.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader/entity/entity.geom
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader/entity/compute/random_waypoint.comp
     ${CMAKE_CURRENT_SOURCE_DIR}/shader/screen_square/screen_square.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader/screen_square/screen_square.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader/screen_square/screen_square.geom

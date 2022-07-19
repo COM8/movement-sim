@@ -6,6 +6,7 @@
     <file>shader/entity/entity.frag</file>
     <file>shader/entity/entity.vert</file>
     <file>shader/entity/entity.geom</file>
+    <file>shader/entity/compute/random_waypoint.comp</file>
     <file>shader/screen_square/screen_square.vert</file>
     <file>shader/screen_square/screen_square.frag</file>
     <file>shader/screen_square/screen_square.geom</file>

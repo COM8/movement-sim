@@ -1,0 +1,219 @@
+#version 450
+
+// Ensure we have a compact layout for uniform arrays.
+// Else we would have to pass multiples of sizeof(vec4) when binding.
+// Source: https://www.reddit.com/r/vulkan/comments/u5jiws/comment/i575o3i/?utm_source=share&utm_medium=web2x&context=3
+#extension GL_EXT_scalar_block_layout : require
+
+layout (local_size_x = 1) in;
+
+struct EntityDescriptor {
+    vec4 color;
+    vec2 pos;
+    vec2 target;
+    vec2 direction;
+    int randSeed;
+    uint roadIndex;
+    bool initialized;
+    // Not required some how since it's alligned to a multiple of 4 anyway...
+    // float padding0; // Make sure we are alligned to 64 bytes like the original entity
+    // float padding1;
+    // float padding2;
+};
+
+struct CoordinateDescriptor {
+    vec2 pos;
+    uint connectedIndex;
+    uint connectedCount;
+};
+
+struct RoadDescriptor {
+    CoordinateDescriptor start;
+    CoordinateDescriptor end;
+};
+
+layout(push_constant) uniform PushConstants {
+	float worldSizeX;
+	float worldSizeY;
+} pushConsts;
+
+layout(set = 0, binding = 0, std430) buffer bufEntity { EntityDescriptor entities[]; };
+
+layout(set = 0, binding = 1, std430) uniform bufRoads { RoadDescriptor roads[96449]; };
+layout(set = 0, binding = 2, std430) uniform bufConnections { uint connections[289347]; };
+
+precision highp float;
+
+// ------------------------------------------------------------------------------------
+// XOR-Shift
+// Source: https://www.shadertoy.com/view/tsf3Dn
+// ------------------------------------------------------------------------------------
+int MIN = -2147483648;
+int MAX = 2147483647;
+
+int xorshift(int value) {
+    // Xorshift*32
+    // Based on George Marsaglia's work: http://www.jstatsoft.org/v08/i14/paper
+    value ^= value << 13;
+    value ^= value >> 17;
+    value ^= value << 5;
+    return value;
+}
+
+int nextInt(int seed) {
+    return xorshift(seed);
+}
+
+float nextFloat(int seed) {
+    seed = xorshift(seed);
+    // FIXME: This should have been a seed mapped from MIN..MAX to 0..1 instead
+    return abs(fract(float(seed) / 3141.592653));
+}
+
+float nextFloat(int seed, float maxValue) {
+    return nextFloat(seed) * maxValue;
+}
+
+// ------------------------------------------------------------------------------------
+
+float SPEED = 1.4;
+
+bool check_collision(uint index) {
+    bool collision = false;
+    if(entities[index].pos.x > pushConsts.worldSizeX) {
+        entities[index].pos.x = pushConsts.worldSizeX;
+        entities[index].direction = reflect(entities[index].direction, vec2(1, 0));
+        collision = true;
+    }
+    else if(entities[index].pos.x < 0) {
+        entities[index].pos.x = 0;
+        entities[index].direction = reflect(entities[index].direction, vec2(1, 0));
+        collision = true;
+    }
+
+    if(entities[index].pos.y > pushConsts.worldSizeY) {
+        entities[index].pos.y = pushConsts.worldSizeY;
+        entities[index].direction = reflect(entities[index].direction, vec2(0, 1));
+        collision = true;
+    }
+    else if(entities[index].pos.y < 0) {
+        entities[index].pos.y = 0;
+        entities[index].direction = reflect(entities[index].direction, vec2(0, 1));
+        collision = true;
+    }
+    return collision;
+}
+
+void new_target(uint index) {
+    // RoadDescriptor curRoad1 = roads[entities[index].roadIndex];
+    // if(entities[index].target == curRoad1.start.pos)  {
+    //     entities[index].target = curRoad1.end.pos;
+    // }
+    // else {
+    //     entities[index].target = curRoad1.start.pos;
+    // }
+    // return;
+
+    // Get current road:
+    RoadDescriptor curRoad = roads[entities[index].roadIndex];
+    CoordinateDescriptor curCoord;
+    // Get current coordinate:
+    if(entities[index].target == curRoad.start.pos) {
+        curCoord = curRoad.start;
+        // Just turn around in case there are no other connected roads:
+        if(curCoord.connectedCount <= 1) {
+            entities[index].target = curRoad.end.pos;
+            return;
+        }
+    }
+    else {
+        curCoord = curRoad.end;
+        // Just turn around in case there are no other connected roads:
+        if(curCoord.connectedCount <= 1) {
+            entities[index].target = curRoad.start.pos;
+            return;
+        }
+    }
+
+    uint newRoadIndex = -1;
+    // Only one alternative available? Select it immediately:
+    if(curCoord.connectedCount == 2) {
+        newRoadIndex = connections[curCoord.connectedIndex + 1];
+    }
+    else {
+        uint newRoadOffset = uint(nextFloat(entities[index].randSeed, curCoord.connectedCount));
+        entities[index].randSeed = nextInt(entities[index].randSeed);
+        newRoadIndex = connections[curCoord.connectedIndex + newRoadOffset];
+    }
+
+    // Update the new target:
+    RoadDescriptor newRoad = roads[newRoadIndex];
+    if(newRoad.start.pos == entities[index].target) {
+        entities[index].target = newRoad.end.pos;
+    }
+    else {
+        entities[index].target = newRoad.start.pos;
+    }
+    entities[index].roadIndex = newRoadIndex;
+
+    // New random target:
+    // float targetX = nextFloat(entities[index].randSeed, pushConsts.worldSizeX);
+    // entities[index].randSeed = nextInt(entities[index].randSeed);
+    // float targetY = nextFloat(entities[index].randSeed, pushConsts.worldSizeY);
+    // entities[index].randSeed = nextInt(entities[index].randSeed);
+    // entities[index].target = vec2(targetX, targetY);
+}
+
+void update_direction(uint index) {
+    vec2 dist = entities[index].target - entities[index].pos;
+    float len = length(dist);
+    if(len == 0) {
+        entities[index].direction = vec2(0);
+        return;
+    }
+    vec2 normVec = dist / vec2(len);
+    entities[index].direction = normVec * SPEED;
+}
+
+void move(uint index) {
+    // entities[index].roadIndex += 10;
+    // RoadDescriptor nextRoad = roads[entities[index].roadIndex];
+    // entities[index].target = nextRoad.end.pos;
+    // entities[index].pos = nextRoad.start.pos;
+    // return;
+
+    float dist = distance(entities[index].pos, entities[index].target);
+
+    if(dist > SPEED) {
+        entities[index].pos += entities[index].direction;
+    }
+    else {
+        entities[index].pos = entities[index].target;
+        new_target(index);
+        update_direction(index);
+    }
+}
+
+// void set_random_color(uint index) {
+//     int seed = entities[index].randSeed;
+//     entities[index].color.r = entities[index].pos.x / pushConsts.worldSizeX;
+//     seed = nextInt(seed);
+//     entities[index].color.g = entities[index].pos.y / pushConsts.worldSizeY;
+//     seed = nextInt(seed);
+//     entities[index].color.b = 0.0;
+//     entities[index].randSeed = nextInt(seed);
+// }
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+
+    if(!entities[index].initialized) {
+        entities[index].initialized = true;
+    }
+
+    update_direction(index);
+    move(index);
+    if(check_collision(index)) {
+        // set_random_color(index);
+    }
+}

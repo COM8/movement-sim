@@ -31,11 +31,14 @@ void EntityGlObject::init_internal() {
     assert(geomShader > 0);
     fragShader = compile_shader("/ui/shader/entity/entity.frag", GL_FRAGMENT_SHADER);
     assert(fragShader > 0);
+    computeShader = compile_shader("/ui/shader/entity/compute/random_waypoint.comp", GL_COMPUTE_SHADER);
+    assert(computeShader > 0);
 
     // Prepare program:
     glAttachShader(shaderProg, vertShader);
     glAttachShader(shaderProg, geomShader);
     glAttachShader(shaderProg, fragShader);
+    glAttachShader(shaderProg, computeShader);
     glBindFragDataLocation(shaderProg, 0, "outColor");
     glLinkProgram(shaderProg);
     GLERR;
@@ -57,6 +60,7 @@ void EntityGlObject::init_internal() {
         glDetachShader(shaderProg, fragShader);
         glDetachShader(shaderProg, geomShader);
         glDetachShader(shaderProg, vertShader);
+        glDetachShader(shaderProg, computeShader);
     }
     GLERR;
 
@@ -77,6 +81,8 @@ void EntityGlObject::init_internal() {
     rectSizeConst = glGetUniformLocation(shaderProg, "rectSize");
     glUniform2f(rectSizeConst, 10, 10);
     GLERR;
+
+    init_compute_shader();
 }
 
 void EntityGlObject::render_internal() {
@@ -84,8 +90,12 @@ void EntityGlObject::render_internal() {
 }
 
 void EntityGlObject::cleanup_internal() {
-    glDeleteShader(fragShader);
-    glDeleteShader(geomShader);
-    glDeleteShader(fragShader);
+    glDetachShader(shaderProg, fragShader);
+    glDetachShader(shaderProg, geomShader);
+    glDetachShader(shaderProg, vertShader);
+    glDetachShader(shaderProg, computeShader);
+}
+
+void EntityGlObject::init_compute_shader() {
 }
 }  // namespace ui::widgets::opengl
