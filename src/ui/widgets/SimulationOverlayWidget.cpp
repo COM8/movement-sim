@@ -4,6 +4,7 @@
 #include "spdlog/fmt/bundled/core.h"
 #include <cassert>
 #include <chrono>
+#include <optional>
 #include <string>
 #include <bits/chrono.h>
 #include <fmt/core.h>
@@ -67,6 +68,18 @@ void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context
     stats += fmt::format(local, "Roads: {:L}\n", simulator->get_map()->roads.size());
     stats += fmt::format(local, "Connections: {:L}\n", simulator->get_map()->connections.size());
     stats += fmt::format(local, "Render Resolution: {:L}x{:L}\n", sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y);
+
+    assert(simulator);
+    const std::shared_ptr<sim::Map> map = simulator->get_map();
+    assert(map);
+    if (map->selectedRoad != std::nullopt) {
+        stats += "\n";
+        stats += fmt::format("Selected road: {}\n", *(map->selectedRoad));
+        stats += fmt::format("Start pos: ({}|{})\n", map->roads[*(map->selectedRoad)].start.pos.x, map->roads[*(map->selectedRoad)].start.pos.y);
+        stats += fmt::format("Start connection count: {}\n", map->roads[*(map->selectedRoad)].start.connectedCount);
+        stats += fmt::format("End pos: ({}|{})\n", map->roads[*(map->selectedRoad)].end.pos.x, map->roads[*(map->selectedRoad)].end.pos.y);
+        stats += fmt::format("End connection count: {}\n", map->roads[*(map->selectedRoad)].end.connectedCount);
+    }
     draw_text(stats, ctx, 5, 5);
 }
 
