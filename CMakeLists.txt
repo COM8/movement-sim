@@ -39,7 +39,7 @@ message(STATUS "Movement Simulator client options")
 message(STATUS "=======================================================")
 movement_simulator_option(MOVEMENT_SIMULATOR_STATIC_ANALYZE "Set to ON to enable the GCC 10 static analysis. If enabled, MOVEMENT_SIMULATOR_ENABLE_LINTING has to be disabled." OFF)
 movement_simulator_option(MOVEMENT_SIMULATOR_ENABLE_LINTING "Set to ON to enable clang linting. If enabled, MOVEMENT_SIMULATOR_STATIC_ANALYZE has to be disabled." OFF)
-movement_simulator_option(MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API "Set to ON to enable RenderDoc in application APIs for Kompute to allow inspecting compute shaders." ON)
+movement_simulator_option(MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API "Set to ON to enable RenderDoc in application APIs for Kompute to allow inspecting compute shaders." OFF)
 movement_simulator_log_level_option(MOVEMENT_SIMULATOR_LOG_LEVEL "Sets the log level. 'Default' will set the log level to 'Debug' for debug builds and 'Info' for release builds." "Off")
 message(STATUS "=======================================================")
 
