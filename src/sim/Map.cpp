@@ -15,11 +15,13 @@ Coordinate::Coordinate(Vec2 pos, unsigned int connectedIndex, unsigned int conne
                                                                                              connectedIndex(connectedIndex),
                                                                                              connectedCount(connectedCount) {}
 
-Map::Map(float width, float height, std::vector<Road>&& roads, std::vector<RoadCompact>&& roadsCompact, std::vector<unsigned int>&& connections) : width(width),
-                                                                                                                                                   height(height),
-                                                                                                                                                   roads(std::move(roads)),
-                                                                                                                                                   roadsCompact(std::move(roadsCompact)),
-                                                                                                                                                   connections(std::move(connections)) {}
+Map::Map(float width, float height, std::vector<Road>&& roads, std::vector<RoadPiece>&& roadPieces, std::vector<unsigned int>&& connections) : width(width),
+                                                                                                                                               height(height),
+                                                                                                                                               roads(std::move(roads)),
+                                                                                                                                               roadPieces(std::move(roadPieces)),
+                                                                                                                                               connections(std::move(connections)) {
+    assert(roadPieces.size() == roads.size() * 2);
+}
 
 std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
     SPDLOG_INFO("Loading map from '{}'...", path.string());
@@ -48,7 +50,7 @@ std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
     json.at("maxDistLong").get_to(height);
 
     std::vector<Road> roads;
-    std::vector<RoadCompact> roadsCompact;
+    std::vector<RoadPiece> roadPieces;
 
     if (!json.contains("roads")) {
         throw std::runtime_error("Failed to parse map. 'roads' field missing.");
@@ -124,7 +126,8 @@ std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
         }
 
         roads.emplace_back(Road{Coordinate{start, connIndexStart, connCountStart}, Coordinate{end, connIndexEnd, connCountEnd}});
-        roadsCompact.emplace_back(RoadCompact{start, end});
+        roadPieces.emplace_back(RoadPiece{start, {}, sim::Rgba{1.0, 0.0, 0.0, 1.0}});  // Start
+        roadPieces.emplace_back(RoadPiece{start, {}, sim::Rgba{1.0, 0.0, 0.0, 1.0}});  // End
     }
 
     std::vector<unsigned int> connections{};
@@ -139,15 +142,15 @@ std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
         connections.push_back(static_cast<unsigned int>(jConnection));
     }
 
-    SPDLOG_INFO("Map loaded from '{}'. Found {} roads with {} connections.", path.string(), roadsCompact.size(), connections.size());
-    assert(roads.size() == roadsCompact.size());
-    return std::make_shared<Map>(width, height, std::move(roads), std::move(roadsCompact), std::move(connections));
+    SPDLOG_INFO("Map loaded from '{}'. Found {} roads with {} connections.", path.string(), roadPieces.size(), connections.size());
+    assert(roads.size() * 2 == roadPieces.size());
+    return std::make_shared<Map>(width, height, std::move(roads), std::move(roadPieces), std::move(connections));
 }
 
 unsigned int Map::get_random_road_index() const {
     static std::random_device device;
     static std::mt19937 gen(device());
-    static std::uniform_int_distribution<unsigned int> distr(0, roadsCompact.size());
+    static std::uniform_int_distribution<unsigned int> distr(0, roadPieces.size());
     return distr(gen);
 }
 }  // namespace sim

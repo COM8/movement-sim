@@ -64,7 +64,7 @@ void EntityGlObject::init_internal() {
     glUseProgram(shaderProg);
     GLint colAttrib = glGetAttribLocation(shaderProg, "color");
     glEnableVertexAttribArray(colAttrib);
-    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), nullptr);
+    glVertexAttribPointer(colAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), nullptr);
 
     GLint posAttrib = glGetAttribLocation(shaderProg, "position");
     glEnableVertexAttribArray(posAttrib);

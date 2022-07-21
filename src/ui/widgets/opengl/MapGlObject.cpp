@@ -12,8 +12,8 @@ void MapGlObject::init_internal() {
     assert(map);
 
     // Vertex data:
-    size_t size = map->roadsCompact.size();
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::Vec2) * size * 2), static_cast<void*>(map->roadsCompact.data()), GL_STATIC_DRAW);
+    size_t size = map->roadPieces.size();
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::RoadPiece) * size), static_cast<void*>(map->roadPieces.data()), GL_STATIC_DRAW);
 
     // Compile shader:
     vertShader = compile_shader("/ui/shader/map/map.vert", GL_VERTEX_SHADER);
@@ -49,11 +49,15 @@ void MapGlObject::init_internal() {
 
     // Bind attributes:
     glUseProgram(shaderProg);
-    GLint mapPosAttrib = glGetAttribLocation(shaderProg, "position");
-    glEnableVertexAttribArray(mapPosAttrib);
+    GLint colAttrib = glGetAttribLocation(shaderProg, "color");
+    glEnableVertexAttribArray(colAttrib);
     // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
-    glVertexAttribPointer(mapPosAttrib, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-    GLERR;
+    glVertexAttribPointer(colAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(sim::RoadPiece), reinterpret_cast<void*>(2 * sizeof(sim::Vec2)));
+
+    GLint posAttrib = glGetAttribLocation(shaderProg, "position");
+    glEnableVertexAttribArray(posAttrib);
+    // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
+    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::RoadPiece), nullptr);
 
     GLint worldSizeConst = glGetUniformLocation(shaderProg, "worldSize");
     GLERR;
@@ -63,7 +67,7 @@ void MapGlObject::init_internal() {
 
 void MapGlObject::render_internal() {
     glLineWidth(1);
-    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(simulator->get_map()->roadsCompact.size() * 2));
+    glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(simulator->get_map()->roadPieces.size()));
 }
 
 void MapGlObject::cleanup_internal() {

@@ -42,6 +42,7 @@ Rgba Rgba::random_color() {
     return Rgba{
         distr(gen),
         distr(gen),
-        distr(gen)};
+        distr(gen),
+        1.0};
 }
 }  // namespace sim
