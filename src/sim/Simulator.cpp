@@ -65,6 +65,7 @@ void Simulator::add_entities() {
     entities->reserve(MAX_ENTITIES);
     for (size_t i = 1; i <= MAX_ENTITIES; i++) {
         const unsigned int roadIndex = map->get_random_road_index();
+        assert(roadIndex < map->roads.size());
         const Road road = map->roads[roadIndex];
         entities->push_back(Entity(Rgba::random_color(),
                                    Vec2(road.start.pos),

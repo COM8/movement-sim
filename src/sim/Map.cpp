@@ -127,7 +127,7 @@ std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
 
         roads.emplace_back(Road{Coordinate{start, connIndexStart, connCountStart}, Coordinate{end, connIndexEnd, connCountEnd}});
         roadPieces.emplace_back(RoadPiece{start, {}, sim::Rgba{1.0, 0.0, 0.0, 1.0}});  // Start
-        roadPieces.emplace_back(RoadPiece{start, {}, sim::Rgba{1.0, 0.0, 0.0, 1.0}});  // End
+        roadPieces.emplace_back(RoadPiece{end, {}, sim::Rgba{1.0, 0.0, 0.0, 1.0}});  // End
     }
 
     std::vector<unsigned int> connections{};
@@ -142,7 +142,7 @@ std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
         connections.push_back(static_cast<unsigned int>(jConnection));
     }
 
-    SPDLOG_INFO("Map loaded from '{}'. Found {} roads with {} connections.", path.string(), roadPieces.size(), connections.size());
+    SPDLOG_INFO("Map loaded from '{}'. Found {} roads with {} connections.", path.string(), roads.size(), connections.size());
     assert(roads.size() * 2 == roadPieces.size());
     return std::make_shared<Map>(width, height, std::move(roads), std::move(roadPieces), std::move(connections));
 }
@@ -150,7 +150,7 @@ std::shared_ptr<Map> Map::load_from_file(const std::filesystem::path& path) {
 unsigned int Map::get_random_road_index() const {
     static std::random_device device;
     static std::mt19937 gen(device());
-    static std::uniform_int_distribution<unsigned int> distr(0, roadPieces.size());
+    static std::uniform_int_distribution<unsigned int> distr(0, roads.size() - 1);
     return distr(gen);
 }
 }  // namespace sim

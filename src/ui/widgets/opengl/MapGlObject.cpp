@@ -12,8 +12,8 @@ void MapGlObject::init_internal() {
     assert(map);
 
     // Vertex data:
-    size_t size = map->roadPieces.size();
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::RoadPiece) * size), static_cast<void*>(map->roadPieces.data()), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::RoadPiece) * map->roadPieces.size()), static_cast<void*>(map->roadPieces.data()), GL_STATIC_DRAW);
+    GLERR;
 
     // Compile shader:
     vertShader = compile_shader("/ui/shader/map/map.vert", GL_VERTEX_SHADER);
@@ -50,14 +50,18 @@ void MapGlObject::init_internal() {
     // Bind attributes:
     glUseProgram(shaderProg);
     GLint colAttrib = glGetAttribLocation(shaderProg, "color");
+    GLERR;
     glEnableVertexAttribArray(colAttrib);
+    GLERR;
     // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
     glVertexAttribPointer(colAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(sim::RoadPiece), reinterpret_cast<void*>(2 * sizeof(sim::Vec2)));
+    GLERR;
 
     GLint posAttrib = glGetAttribLocation(shaderProg, "position");
     glEnableVertexAttribArray(posAttrib);
     // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
     glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::RoadPiece), nullptr);
+    GLERR;
 
     GLint worldSizeConst = glGetUniformLocation(shaderProg, "worldSize");
     GLERR;
