@@ -62,5 +62,6 @@ class SimulationWidget : public Gtk::ScrolledWindow {
     bool on_tick(const Glib::RefPtr<Gdk::FrameClock>& frameClock);
     void on_realized();
     void on_unrealized();
+    void on_glArea_clicked(int nPress, double x, double y);
 };
 }  // namespace ui::widgets

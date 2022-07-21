@@ -17,6 +17,7 @@
 #include <epoxy/gl_generated.h>
 #include <fmt/core.h>
 #include <glibconfig.h>
+#include <gtkmm/gestureclick.h>
 #include <gtkmm/gesturezoom.h>
 
 namespace ui::widgets {
@@ -45,6 +46,10 @@ void SimulationWidget::prep_widget() {
     glArea.signal_realize().connect(sigc::mem_fun(*this, &SimulationWidget::on_realized));
     glArea.signal_unrealize().connect(sigc::mem_fun(*this, &SimulationWidget::on_unrealized));
     glArea.add_tick_callback(sigc::mem_fun(*this, &SimulationWidget::on_tick));
+    Glib::RefPtr<Gtk::GestureClick> clickGesture = Gtk::GestureClick::create();
+    clickGesture->set_button(GDK_BUTTON_PRIMARY);
+    clickGesture->signal_pressed().connect(sigc::mem_fun(*this, &SimulationWidget::on_glArea_clicked));
+    glArea.add_controller(clickGesture);
 
     assert(simulator);
     const std::shared_ptr<sim::Map> map = simulator->get_map();
@@ -206,5 +211,37 @@ void SimulationWidget::on_unrealized() {
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred deleting the context current during unrealize: {} - {} - {}", gle.domain(), gle.code(), gle.what());
     }
+}
+
+void SimulationWidget::on_glArea_clicked(int nPress, double x, double y) {
+    assert(simulator);
+    const std::shared_ptr<sim::Map> map = simulator->get_map();
+    assert(map);
+
+    x *= map->width / sim::MAX_RENDER_RESOLUTION_X;
+    y *= map->height / sim::MAX_RENDER_RESOLUTION_Y;
+    sim::Vec2 pos{static_cast<float>(x), static_cast<float>(y)};
+    SPDLOG_DEBUG("GLArea click: x={}, y={}, n_press={}", x, y, nPress);
+
+    if (map->roads.empty()) {
+        return;
+    }
+
+    // Get closest road:
+    size_t roadIndex = 0;
+    float shortestDist = map->roads[0].distance(pos);
+    for (size_t i = 1; i < map->roads.size(); i++) {
+        float newDist = map->roads[i].distance(pos);
+        if (newDist < shortestDist) {
+            shortestDist = newDist;
+            roadIndex = i;
+        }
+    }
+
+    map->select_road(roadIndex);
+    // Ensure we rerender the map once the road selection changed:
+    mapRendered = false;
+
+    SPDLOG_DEBUG("Road ({}) selected between position ({}|{}) and ({}|{}) with distance of {} meters.", roadIndex, map->roads[roadIndex].start.pos.x, map->roads[roadIndex].start.pos.y, map->roads[roadIndex].end.pos.x, map->roads[roadIndex].end.pos.y, shortestDist);
 }
 }  // namespace ui::widgets

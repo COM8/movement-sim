@@ -1,4 +1,5 @@
 #include "Entity.hpp"
+#include <algorithm>
 #include <limits>
 #include <random>
 

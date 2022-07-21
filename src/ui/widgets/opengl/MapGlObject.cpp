@@ -12,7 +12,7 @@ void MapGlObject::init_internal() {
     assert(map);
 
     // Vertex data:
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::RoadPiece) * map->roadPieces.size()), static_cast<void*>(map->roadPieces.data()), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(sizeof(sim::RoadPiece) * map->roadPieces.size()), static_cast<void*>(map->roadPieces.data()), GL_DYNAMIC_DRAW);
     GLERR;
 
     // Compile shader:
@@ -70,6 +70,11 @@ void MapGlObject::init_internal() {
 }
 
 void MapGlObject::render_internal() {
+    assert(simulator);
+    const std::shared_ptr<sim::Map> map = simulator->get_map();
+    assert(map);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(sizeof(sim::RoadPiece) * map->roadPieces.size()), static_cast<void*>(map->roadPieces.data()));
+
     glLineWidth(1);
     glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(simulator->get_map()->roadPieces.size()));
 }
