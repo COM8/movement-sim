@@ -22,11 +22,6 @@ struct Road {
     Coordinate start;
     Coordinate end;
 
-    /**
-     * Calculates the shortest distance between the given point and the current road.
-     * Source: https://stackoverflow.com/a/6853926
-     **/
-    [[nodiscard]] float distance(const sim::Vec2& point) const;
 } __attribute__((aligned(32))) __attribute__((__packed__));
 
 struct RoadPiece {
@@ -42,7 +37,6 @@ class Map {
     std::vector<Road> roads;
     std::vector<RoadPiece> roadPieces;
     std::vector<unsigned int> connections;
-
     std::optional<size_t> selectedRoad{std::nullopt};
 
     Map(float width, float height, std::vector<Road>&& roads, std::vector<RoadPiece>&& roadPieces, std::vector<unsigned int>&& connections);

@@ -1,5 +1,6 @@
 #include "Entity.hpp"
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <random>
 
@@ -17,6 +18,10 @@ int Entity::random_int() {
     static std::mt19937 gen(device());
     static std::uniform_int_distribution<int> distr(std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
     return distr(gen);
+}
+
+double Vec2::dist(const Vec2& other) const {
+    return std::sqrt(std::pow(other.x - this->x, 2) + std::pow(other.y - this->y, 2));
 }
 
 Vec2 Vec2::random_vec(float x_min, float x_max, float y_min, float y_max) {

@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <string>
 #include <bits/chrono.h>
 #include <epoxy/gl.h>
@@ -213,15 +214,19 @@ void SimulationWidget::on_unrealized() {
     }
 }
 
-void SimulationWidget::on_glArea_clicked(int nPress, double x, double y) {
+void SimulationWidget::on_glArea_clicked(int /*nPress*/, double x, double y) {
     assert(simulator);
     const std::shared_ptr<sim::Map> map = simulator->get_map();
     assert(map);
 
+    // Invert since coordinates are inverted on the map:
+    // x = glArea.get_width() - x;
+    y = glArea.get_height() - y;
+
+    // Scale up to map size:
     x *= map->width / sim::MAX_RENDER_RESOLUTION_X;
     y *= map->height / sim::MAX_RENDER_RESOLUTION_Y;
     sim::Vec2 pos{static_cast<float>(x), static_cast<float>(y)};
-    SPDLOG_DEBUG("GLArea click: x={}, y={}, n_press={}", x, y, nPress);
 
     if (map->roads.empty()) {
         return;
@@ -229,9 +234,19 @@ void SimulationWidget::on_glArea_clicked(int nPress, double x, double y) {
 
     // Get closest road:
     size_t roadIndex = 0;
-    float shortestDist = map->roads[0].distance(pos);
-    for (size_t i = 1; i < map->roads.size(); i++) {
-        float newDist = map->roads[i].distance(pos);
+    double shortestDist = std::numeric_limits<double>::max();
+    for (size_t i = 0; i < map->roads.size(); i++) {
+        // Start:
+        double newDist = map->roads[i].start.pos.dist(pos);
+        assert(newDist >= 0);
+        if (newDist < shortestDist) {
+            shortestDist = newDist;
+            roadIndex = i;
+        }
+
+        // End:
+        newDist = map->roads[i].end.pos.dist(pos);
+        assert(newDist >= 0);
         if (newDist < shortestDist) {
             shortestDist = newDist;
             roadIndex = i;
@@ -242,6 +257,10 @@ void SimulationWidget::on_glArea_clicked(int nPress, double x, double y) {
     // Ensure we rerender the map once the road selection changed:
     mapRendered = false;
 
-    SPDLOG_DEBUG("Road ({}) selected between position ({}|{}) and ({}|{}) with distance of {} meters.", roadIndex, map->roads[roadIndex].start.pos.x, map->roads[roadIndex].start.pos.y, map->roads[roadIndex].end.pos.x, map->roads[roadIndex].end.pos.y, shortestDist);
+    float x1 = map->roads[roadIndex].start.pos.x;
+    float x2 = map->roads[roadIndex].end.pos.x;
+    float y1 = map->roads[roadIndex].start.pos.y;
+    float y2 = map->roads[roadIndex].end.pos.y;
+    SPDLOG_DEBUG("Road ({}) selected between position ({}|{}) and ({}|{}) with distance of {} meters.", roadIndex, x1, y1, x2, y2, shortestDist);
 }
 }  // namespace ui::widgets

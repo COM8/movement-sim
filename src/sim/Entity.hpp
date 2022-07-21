@@ -7,6 +7,8 @@ struct Vec2 {
     float x{0};
     float y{0};
 
+    [[nodiscard]] double dist(const Vec2& other) const;
+
     static Vec2 random_vec(float x_min, float x_max, float y_min, float y_max);
 } __attribute__((aligned(8))) __attribute__((__packed__));
 

@@ -9,44 +9,13 @@
 #include <fstream>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <random>
 
 namespace sim {
 Coordinate::Coordinate(Vec2 pos, unsigned int connectedIndex, unsigned int connectedCount) : pos(pos),
                                                                                              connectedIndex(connectedIndex),
                                                                                              connectedCount(connectedCount) {}
-
-float Road::distance(const sim::Vec2& point) const {
-    float A = point.x - start.pos.x;
-    float B = point.y - start.pos.y;
-    float C = end.pos.x - start.pos.x;
-    float D = end.pos.y - start.pos.y;
-
-    float dot = A * C + B * D;
-    float len_sq = C * C + D * D;
-    float param = -1;
-    if (len_sq != 0) {  //in case of 0 length line
-        param = dot / len_sq;
-    }
-
-    float xx = 0;
-    float yy = 0;
-
-    if (param < 0) {
-        xx = start.pos.x;
-        yy = start.pos.y;
-    } else if (param > 1) {
-        xx = end.pos.x;
-        yy = end.pos.y;
-    } else {
-        xx = start.pos.x + param * C;
-        yy = start.pos.y + param * D;
-    }
-
-    float dx = point.x - xx;
-    float dy = point.y - yy;
-    return std::sqrt(dx * dx + dy * dy);
-}
 
 Map::Map(float width, float height, std::vector<Road>&& roads, std::vector<RoadPiece>&& roadPieces, std::vector<unsigned int>&& connections) : width(width),
                                                                                                                                                height(height),
@@ -194,14 +163,14 @@ void Map::select_road(size_t roadIndex) {
     const sim::Rgba SELECTED_COLOR{0.0, 1.0, 0.0, 1.0};
 
     // Unselect selected road:
-    if (selectedRoad) {
-        roadPieces[*selectedRoad * 2].color = UNSELECTED_COLOR;
-        roadPieces[(*selectedRoad * 2) + 1].color = UNSELECTED_COLOR;
+    if (selectedRoad != std::nullopt) {
+        roadPieces[(*selectedRoad) * 2].color = UNSELECTED_COLOR;
+        roadPieces[((*selectedRoad) * 2) + 1].color = UNSELECTED_COLOR;
     }
 
     // Select new road:
-    *selectedRoad = roadIndex;
-    roadPieces[*selectedRoad * 2].color = SELECTED_COLOR;
-    roadPieces[(*selectedRoad * 2) + 1].color = SELECTED_COLOR;
+    selectedRoad = roadIndex;
+    roadPieces[(*selectedRoad) * 2].color = SELECTED_COLOR;
+    roadPieces[((*selectedRoad) * 2) + 1].color = SELECTED_COLOR;
 }
 }  // namespace sim
