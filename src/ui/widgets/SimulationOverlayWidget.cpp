@@ -58,14 +58,15 @@ void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context
     double fps = simWidget->get_fps().get_ticks();
     std::string fpsTime = simWidget->get_fps_history().get_avg_time_str();
 
+    std::locale local("en_US.UTF-8");
     std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {}\n", tps, tpsTime, sim::MAX_ENTITIES);
     stats += fmt::format("FPS: {:.2f}\nFrame Time: {}\n", fps, fpsTime);
-    stats += fmt::format("Entities: {}\n", sim::MAX_ENTITIES);
+    stats += fmt::format(local, "Entities: {:L}\n", sim::MAX_ENTITIES);
     stats += fmt::format("Zoom: {}\n", simWidget->get_zoom_factor());
-    stats += fmt::format("\nMap Size: {}x{}\n", simulator->get_map()->width, simulator->get_map()->height);
-    stats += fmt::format("Roads: {}\n", simulator->get_map()->roads.size());
-    stats += fmt::format("Connections: {}\n", simulator->get_map()->connections.size());
-    stats += fmt::format("Render Resolution: {}x{}\n", sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y);
+    stats += fmt::format(local, "\nMap Size: {:L}x{:L}\n", simulator->get_map()->width, simulator->get_map()->height);
+    stats += fmt::format(local, "Roads: {:L}\n", simulator->get_map()->roads.size());
+    stats += fmt::format(local, "Connections: {:L}\n", simulator->get_map()->connections.size());
+    stats += fmt::format(local, "Render Resolution: {:L}x{:L}\n", sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y);
     draw_text(stats, ctx, 5, 5);
 }
 
