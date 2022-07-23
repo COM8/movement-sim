@@ -87,7 +87,7 @@ clear_variable(DESTINATION CMAKE_CXX_CLANG_TIDY BACKUP CMAKE_CXX_CLANG_TIDY_BKP)
 clear_variable(DESTINATION CMAKE_CXX_FLAGS BACKUP CMAKE_CXX_FLAGS_BKP)
 clear_variable(DESTINATION CMAKE_CXX_FLAGS_DEBUG BACKUP CMAKE_CXX_FLAGS_DEBUG_BKP)
 
-FetchContent_Declare(fmt GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+FetchContent_Declare(fmt GIT_REPOSITORY https://github.com/fmtlib/fmt.git   
                          GIT_TAG b6f4ceaed0a0a24ccf575fab6c56dd50ccf6f1a9) # The hash for the release commit of 8.1.1 from: https://github.com/fmtlib/fmt/releases
 FetchContent_MakeAvailable(fmt)
 include_directories(${fmt_SOURCE_DIR}/include)
@@ -102,7 +102,7 @@ set(KOMPUTE_OPT_USE_BUILD_IN_VULKAN_HEADER OFF)
 set(KOMPUTE_OPT_BUILD_SHADERS ON)
 set(KOMPUTE_OPT_LOG_LEVEL "Off")
 FetchContent_Declare(kompute GIT_REPOSITORY https://github.com/COM8/kompute.git
-                             GIT_TAG 8ba946524725a6eb033a1c830321e65e17bd7749)
+                             GIT_TAG 549c3b4a15c8a031726e76dc28413aa8624e0a02)
 FetchContent_MakeAvailable(kompute)
 include_directories(${kompute_SOURCE_DIR}/src/include)
 

@@ -73,12 +73,19 @@ void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context
     const std::shared_ptr<sim::Map> map = simulator->get_map();
     assert(map);
     if (map->selectedRoad != std::nullopt) {
+        uint selectedRoad = *(map->selectedRoad);
+        double startX = map->roads[*(map->selectedRoad)].start.pos.x;
+        double startY = map->roads[*(map->selectedRoad)].start.pos.y;
+        double endX = map->roads[*(map->selectedRoad)].end.pos.x;
+        double endY = map->roads[*(map->selectedRoad)].end.pos.y;
+        uint connectedCountStart = map->roads[*(map->selectedRoad)].start.connectedCount;
+        uint connectedCountEnd = map->roads[*(map->selectedRoad)].end.connectedCount;
         stats += "\n";
-        stats += fmt::format("Selected road: {}\n", *(map->selectedRoad));
-        stats += fmt::format("Start pos: ({}|{})\n", map->roads[*(map->selectedRoad)].start.pos.x, map->roads[*(map->selectedRoad)].start.pos.y);
-        stats += fmt::format("Start connection count: {}\n", map->roads[*(map->selectedRoad)].start.connectedCount);
-        stats += fmt::format("End pos: ({}|{})\n", map->roads[*(map->selectedRoad)].end.pos.x, map->roads[*(map->selectedRoad)].end.pos.y);
-        stats += fmt::format("End connection count: {}\n", map->roads[*(map->selectedRoad)].end.connectedCount);
+        stats += fmt::format("Selected road: {}\n", selectedRoad);
+        stats += fmt::format("Start pos: ({}|{})\n", startX, startY);
+        stats += fmt::format("Start connection count: {}\n", connectedCountStart);
+        stats += fmt::format("End pos: ({}|{})\n", endX, endY);
+        stats += fmt::format("End connection count: {}\n", connectedCountEnd);
     }
     draw_text(stats, ctx, 5, 5);
 }
