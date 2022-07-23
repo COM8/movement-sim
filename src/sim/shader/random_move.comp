@@ -38,6 +38,9 @@ precision highp float;
 // ------------------------------------------------------------------------------------
 // XOR-Shift
 // Source: https://www.shadertoy.com/view/tsf3Dn
+// Should be replaced by:
+// https://lemire.me/blog/2017/09/08/the-xorshift128-random-number-generator-fails-bigcrush/
+// https://www.reddit.com/r/vulkan/comments/ecs8f2/how_to_use_64bit_unsigned_integer_in_shaders_glsl/
 // ------------------------------------------------------------------------------------
 int MIN = -2147483648;
 int MAX = 2147483647;
@@ -103,7 +106,7 @@ void new_target(uint index) {
     if(entities[index].target == curRoad.start.pos) {
         curCoord = curRoad.start;
         // Just turn around in case there are no other connected roads:
-        if(curCoord.connectedCount < 1) {
+        if(curCoord.connectedCount <= 1) {
             entities[index].target = curRoad.end.pos;
             return;
         }
@@ -111,21 +114,22 @@ void new_target(uint index) {
     else {
         curCoord = curRoad.end;
         // Just turn around in case there are no other connected roads:
-        if(curCoord.connectedCount < 1) {
+        if(curCoord.connectedCount <= 1) {
             entities[index].target = curRoad.start.pos;
             return;
         }
     }
 
     uint newRoadIndex = -1;
-    // Only one alternative available? Select it immediately:
-    if(curCoord.connectedCount == 1) {
+    // Only one alternative available (besides our own road)? Select it immediately:
+    if(curCoord.connectedCount == 2) {
         newRoadIndex = connections[curCoord.connectedIndex + 1];
     }
     else {
-        uint newRoadOffset = uint(nextFloat(entities[index].randSeed, curCoord.connectedCount));
+        // Skip our own road:
+        uint newRoadOffset = uint(nextFloat(entities[index].randSeed, curCoord.connectedCount - 1));
         entities[index].randSeed = nextInt(entities[index].randSeed);
-        newRoadIndex = connections[curCoord.connectedIndex + newRoadOffset];
+        newRoadIndex = connections[curCoord.connectedIndex + newRoadOffset + 1];
     }
 
     // Update the new target:
