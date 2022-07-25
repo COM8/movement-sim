@@ -80,9 +80,12 @@ void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context
         double endY = map->roads[*(map->selectedRoad)].end.pos.y;
         uint connectedCountStart = map->roads[*(map->selectedRoad)].start.connectedCount;
         uint connectedCountEnd = map->roads[*(map->selectedRoad)].end.connectedCount;
+        uint startIndex = map->roads[*(map->selectedRoad)].start.connectedIndex;
+        uint endIndex = map->roads[*(map->selectedRoad)].end.connectedIndex;
         stats += "\n";
         stats += fmt::format("Selected road: {}\n", selectedRoad);
         stats += fmt::format("Start pos: ({}|{})\n", startX, startY);
+        stats += fmt::format("Start index: {}\n", startIndex);
         stats += fmt::format("Start connection count: {}\n", connectedCountStart);
         stats += fmt::format("Start connections: ", connectedCountStart);
         for (size_t i = 0; i < connectedCountStart; i++) {
@@ -90,6 +93,7 @@ void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context
         }
         stats += "\n";
         stats += fmt::format("End pos: ({}|{})\n", endX, endY);
+        stats += fmt::format("End index: {}\n", endIndex);
         stats += fmt::format("End connection count: {}\n", connectedCountEnd);
         stats += fmt::format("End connections: ", connectedCountEnd);
         for (size_t i = 0; i < connectedCountEnd; i++) {
