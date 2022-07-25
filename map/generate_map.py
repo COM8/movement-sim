@@ -83,7 +83,7 @@ class Road:
         return hash(self.start) ^ hash(self.end)
 
 class Map:
-    roads: List[Road]
+    roads: Set[Road]
     connectionsMap: Dict[Coordinate, Set[Road]]
     connectionRoadIndexList: List[int]
     
@@ -94,7 +94,7 @@ class Map:
     maxDistLong: float
 
     def __init__(self):
-        self.roads = list()
+        self.roads = set()
         self.connectionsMap = dict()
         self.connectionRoadIndexList = list()
         
@@ -174,11 +174,15 @@ def build_map(features: Dict[str, Any]) -> Map:
         i: int
         for i in range(1, len(roadPointList)):
             road: Road = Road(Coordinate(roadPointList[i-1][0], roadPointList[i-1][1]), Coordinate(roadPointList[i][0], roadPointList[i][1]))
-            map.roads.append(road)
+            if road.start == road.end:
+                print("Skipping road, where start == end")
+                continue
+            assert(not (road in map.roads))
+            map.roads.add(road)
     return map
     
 def remove_not_connected(map: Map, refPoint: Tuple[float, float]) -> None:
-    roads: List[Road] = map.roads
+    roads: List[Road] = list(map.roads)
     result: List[Road] = list()
     next: List[Road] = list()
     next.append(roads[0])
@@ -193,9 +197,11 @@ def remove_not_connected(map: Map, refPoint: Tuple[float, float]) -> None:
         # Update connected roads:
         if not curRoad.start in map.connectionsMap:
             map.connectionsMap[curRoad.start] = set()
+        assert(not (curRoad in map.connectionsMap[curRoad.start]))
         map.connectionsMap[curRoad.start].add(curRoad)
         if not curRoad.end in map.connectionsMap:
             map.connectionsMap[curRoad.end] = set()
+        assert(not (curRoad in map.connectionsMap[curRoad.end]))
         map.connectionsMap[curRoad.end].add(curRoad)
         
         result.append(curRoad)
@@ -215,8 +221,8 @@ def remove_not_connected(map: Map, refPoint: Tuple[float, float]) -> None:
                 road.start = curRoad.end
                 road.end.calc_dist(refPoint[0], refPoint[1])
                 next.append(road)
-                roads.remove(road)
-                
+                roads.remove(road)             
+
         if len(result) % 10 == 0:
             print(f"Status: {len(result)}/{len(roads)} - {len(next)}")
         if len(result) % 100 == 0:
@@ -227,11 +233,14 @@ def remove_not_connected(map: Map, refPoint: Tuple[float, float]) -> None:
 
 def build_road_connections(map: Map) -> None:
     # Ensure every road has an index:
-    for i in range(len(map.roads)):
-        map.roads[i].index = i
+    roads: List[Road] = list(map.roads)
+    for i in range(len(roads)):
+        roads[i].index = i
+    map.roads = set(roads)
     
     # Build road connections list:
     connectionSet: Set[Road]
+    coord: Coordinate
     for coord, connectionSet in map.connectionsMap.items():
         connIndex: int = len(map.connectionRoadIndexList)
         road: Road
