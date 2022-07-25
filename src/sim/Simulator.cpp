@@ -32,7 +32,7 @@ void Simulator::init() {
 #endif
 
     // Load map:
-    map = Map::load_from_file("/home/fabian/Documents/Repos/movement-sim/munich.json");
+    map = Map::load_from_file("/home/sauter/Documents/Repos/movement-sim/munich.json");
 
     shader = std::vector(RANDOM_MOVE_COMP_SPV.begin(), RANDOM_MOVE_COMP_SPV.end());
 
@@ -226,11 +226,15 @@ void Simulator::check_device_queues() {
         std::string devInfo = device.getProperties().deviceName;
         devInfo += "\n";
         for (const vk::QueueFamilyProperties2& props : device.getQueueFamilyProperties2()) {
-            if (props.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eCompute) {
-                devInfo += "Number of compute pipelines: " + std::to_string(props.queueFamilyProperties.queueCount) + "\n";
-            }
-            if (props.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eGraphics) {
-                devInfo += "Number of graphics pipelines: " + std::to_string(props.queueFamilyProperties.queueCount) + "\n";
+            if (props.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eCompute && props.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eGraphics) {
+                devInfo += "Number of graphics/compute pipelines: " + std::to_string(props.queueFamilyProperties.queueCount) + "\n";
+            } else {
+                if (props.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eCompute) {
+                    devInfo += "Number of pure compute pipelines: " + std::to_string(props.queueFamilyProperties.queueCount) + "\n";
+                }
+                if (props.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eGraphics) {
+                    devInfo += "Number of pure graphics pipelines: " + std::to_string(props.queueFamilyProperties.queueCount) + "\n";
+                }
             }
         }
         SPDLOG_INFO("{}", devInfo);
