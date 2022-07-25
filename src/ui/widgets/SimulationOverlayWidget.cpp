@@ -84,8 +84,18 @@ void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context
         stats += fmt::format("Selected road: {}\n", selectedRoad);
         stats += fmt::format("Start pos: ({}|{})\n", startX, startY);
         stats += fmt::format("Start connection count: {}\n", connectedCountStart);
+        stats += fmt::format("Start connections: ", connectedCountStart);
+        for (size_t i = 0; i < connectedCountStart; i++) {
+            stats += std::to_string(map->connections[selectedRoad + i]) + " ";
+        }
+        stats += "\n";
         stats += fmt::format("End pos: ({}|{})\n", endX, endY);
         stats += fmt::format("End connection count: {}\n", connectedCountEnd);
+        stats += fmt::format("End connections: ", connectedCountEnd);
+        for (size_t i = 0; i < connectedCountEnd; i++) {
+            stats += std::to_string(map->connections[selectedRoad + i]) + " ";
+        }
+        stats += "\n";
     }
     draw_text(stats, ctx, 5, 5);
 }
