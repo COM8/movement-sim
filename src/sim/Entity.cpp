@@ -5,13 +5,13 @@
 #include <random>
 
 namespace sim {
-Entity::Entity(Rgba&& color, Vec2&& pos, Vec2&& target, Vec2&& direction, int randSeed, unsigned int roadIndex, bool initialized) : color(color),
-                                                                                                                                    pos(pos),
-                                                                                                                                    target(target),
-                                                                                                                                    direction(direction),
-                                                                                                                                    randomSeed(randSeed),
-                                                                                                                                    roadIndex(roadIndex),
-                                                                                                                                    initialized(initialized) {}
+Entity::Entity(Rgba&& color, Vec4U&& randomState, Vec2&& pos, Vec2&& target, Vec2&& direction, unsigned int roadIndex, bool initialized) : color(color),
+                                                                                                                                           randomState(randomState),
+                                                                                                                                           pos(pos),
+                                                                                                                                           target(target),
+                                                                                                                                           direction(direction),
+                                                                                                                                           roadIndex(roadIndex),
+                                                                                                                                           initialized(initialized) {}
 
 int Entity::random_int() {
     static std::random_device device;
@@ -39,6 +39,13 @@ Vec2 Vec2::random_vec(float x_min, float x_max, float y_min, float y_max) {
     }
 
     return Vec2{distr_x(gen), distr_y(gen)};
+}
+
+Vec4U Vec4U::random_vec() {
+    static std::random_device device;
+    static std::mt19937 gen(device());
+    static std::uniform_int_distribution<unsigned int> distr(std::numeric_limits<unsigned int>::min(), std::numeric_limits<unsigned int>::max());
+    return {distr(gen), distr(gen), distr(gen), distr(gen)};
 }
 
 Rgba Rgba::random_color() {

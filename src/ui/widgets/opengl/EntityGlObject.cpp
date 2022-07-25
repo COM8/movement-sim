@@ -69,7 +69,7 @@ void EntityGlObject::init_internal() {
     GLint posAttrib = glGetAttribLocation(shaderProg, "position");
     glEnableVertexAttribArray(posAttrib);
     // NOLINTNEXTLINE (cppcoreguidelines-pro-type-reinterpret-cast)
-    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), reinterpret_cast<void*>(4 * sizeof(GLfloat)));
+    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(sim::Entity), reinterpret_cast<void*>(sizeof(sim::Rgba) + sizeof(sim::Vec4U)));
 
     worldSizeConst = glGetUniformLocation(shaderProg, "worldSize");
     glUniform2f(worldSizeConst, map->width, map->height);

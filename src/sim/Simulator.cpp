@@ -68,10 +68,10 @@ void Simulator::add_entities() {
         assert(roadIndex < map->roads.size());
         const Road road = map->roads[roadIndex];
         entities->push_back(Entity(Rgba::random_color(),
+                                   Vec4U::random_vec(),
                                    Vec2(road.start.pos),
                                    Vec2(road.end.pos),
                                    {0, 0},
-                                   Entity::random_int(),
                                    roadIndex,
                                    false));
     }
@@ -179,8 +179,7 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
             float directionX = (*entities)[i].direction.x;
             float directionY = (*entities)[i].direction.y;
             unsigned int roadIndex = (*entities)[i].roadIndex;
-            int randSeed = (*entities)[i].randomSeed;
-            SPDLOG_INFO("Pos: {}/{}, Target: {}/{}, Direction: {}/{}, Road Index: {}, Rand Seed: {}", posX, posY, targetX, targetY, directionX, directionY, roadIndex, randSeed);
+            SPDLOG_INFO("Pos: {}/{}, Target: {}/{}, Direction: {}/{}, Road Index: {}", posX, posY, targetX, targetY, directionX, directionY, roadIndex);
         }*/
     }
 

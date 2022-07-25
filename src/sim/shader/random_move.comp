@@ -1,15 +1,15 @@
-#version 450
+#version 460
 
 layout (local_size_x = 1) in;
 
 struct EntityDescriptor {
     vec4 color; // Offset: 0-15
-    vec2 pos; // Offset: 16-23
-    vec2 target; // Offset: 24-31
-    vec2 direction; // Offset: 32-39
-    int randSeed;  // Offset: 40-44
-    uint roadIndex; // Offset: 44-47
-    bool initialized; // Offset: 48-51
+    uvec4 randState; // Offset 16-31
+    vec2 pos; // Offset: 32-39
+    vec2 target; // Offset: 40-47
+    vec2 direction; // Offset: 48-55
+    uint roadIndex; // Offset: 56-59
+    bool initialized; // Offset: 60-63
 }; // Size will be rounded up to the next multiple of the largest member (vec4) -> 64 Bytes
 
 struct CoordinateDescriptor {
@@ -34,38 +34,32 @@ layout(set = 0, binding = 1, std430) buffer readonly bufConnections { uint conne
 layout(set = 0, binding = 2, std430) buffer readonly bufRoads { RoadDescriptor roads[]; };
 
 precision highp float;
+precision highp int;
 
 // ------------------------------------------------------------------------------------
-// XOR-Shift
-// Source: https://www.shadertoy.com/view/tsf3Dn
-// Should be replaced by:
-// https://lemire.me/blog/2017/09/08/the-xorshift128-random-number-generator-fails-bigcrush/
-// https://www.reddit.com/r/vulkan/comments/ecs8f2/how_to_use_64bit_unsigned_integer_in_shaders_glsl/
+// 128 Bit XOR-Shift
+// Source: https://en.wikipedia.org/wiki/Xorshift
 // ------------------------------------------------------------------------------------
-int MIN = -2147483648;
-int MAX = 2147483647;
+uint next(inout uvec4 state) {
+	uint t = state.w;
+    uint s = state.x;
+	state.w = state.z;
+	state.z = state.y;
+	state.y = s;
 
-int xorshift(int value) {
-    // Xorshift*32
-    // Based on George Marsaglia's work: http://www.jstatsoft.org/v08/i14/paper
-    value ^= value << 13;
-    value ^= value >> 17;
-    value ^= value << 5;
-    return value;
+	t ^= t << 11;
+	t ^= t >> 8;
+    state.x = t ^ s ^ (s >> 19);
+	return state.x;
 }
 
-int nextInt(int seed) {
-    return xorshift(seed);
+float next_float(inout uvec4 state) {
+    // Division from: https://www.reedbeta.com/blog/quick-and-easy-gpu-random-numbers-in-d3d11/
+    return float(next(state)) * (1.0 / 4294967296.0);
 }
 
-float nextFloat(int seed) {
-    seed = xorshift(seed);
-    // FIXME: This should have been a seed mapped from MIN..MAX to 0..1 instead
-    return abs(fract(float(seed) / 3141.592653));
-}
-
-float nextFloat(int seed, float maxValue) {
-    return nextFloat(seed) * maxValue;
+uint next(inout uvec4 state, uint min, uint max) {
+    return uint(round(float(min) + (next_float(state) * float(max - min))));
 }
 
 // ------------------------------------------------------------------------------------
@@ -127,9 +121,8 @@ void new_target(uint index) {
     }
     else {
         // Skip our own road:
-        uint newRoadOffset = uint(nextFloat(entities[index].randSeed, curCoord.connectedCount - 1));
-        entities[index].randSeed = nextInt(entities[index].randSeed);
-        newRoadIndex = connections[curCoord.connectedIndex + newRoadOffset + 1];
+        uint newRoadOffset = next(entities[index].randState, 1, curCoord.connectedCount);
+        newRoadIndex = connections[curCoord.connectedIndex + newRoadOffset];
     }
 
     // Update the new target:
@@ -186,6 +179,9 @@ void move(uint index) {
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
+
+    // entities[index].pos = vec2(next(entities[index].randState, 1, 2), next(entities[index].randState, 1, 3));
+    // return;
 
     if(!entities[index].initialized) {
         entities[index].initialized = true;
