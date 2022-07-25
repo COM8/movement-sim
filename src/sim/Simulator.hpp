@@ -91,6 +91,7 @@ class Simulator {
     void sim_worker();
     void sim_tick(std::shared_ptr<kp::Sequence>& sendSeq, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveSeq);
     void add_entities();
+    void check_device_queues();
 
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
     void init_renderdoc();

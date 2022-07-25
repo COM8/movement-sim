@@ -7,6 +7,7 @@
 #include "sim/Map.hpp"
 #include "sim/PushConsts.hpp"
 #include "spdlog/spdlog.h"
+#include "vulkan/vulkan_enums.hpp"
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -51,6 +52,8 @@ void Simulator::init() {
     pushConsts.worldSizeY = map->height;
 
     algo = mgr.algorithm<float, PushConsts>(params, shader, {}, {}, {pushConsts});
+
+    check_device_queues();
 
     initialized = true;
 }
@@ -218,6 +221,22 @@ const utils::TickDurationHistory& Simulator::get_tps_history() const {
     return tpsHistory;
 }
 
+void Simulator::check_device_queues() {
+    for (const vk::PhysicalDevice& device : mgr.listDevices()) {
+        std::string devInfo = device.getProperties().deviceName;
+        devInfo += "\n";
+        for (const vk::QueueFamilyProperties2& props : device.getQueueFamilyProperties2()) {
+            if (props.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eCompute) {
+                devInfo += "Number of compute pipelines: " + std::to_string(props.queueFamilyProperties.queueCount) + "\n";
+            }
+            if (props.queueFamilyProperties.queueFlags & vk::QueueFlagBits::eGraphics) {
+                devInfo += "Number of graphics pipelines: " + std::to_string(props.queueFamilyProperties.queueCount) + "\n";
+            }
+        }
+        SPDLOG_INFO("{}", devInfo);
+    }
+}
+
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
 void Simulator::init_renderdoc() {
     SPDLOG_INFO("Initializing RenderDoc in application API...");
@@ -252,6 +271,5 @@ void Simulator::end_frame_capture() {
     // NOLINTNEXTLINE (google-readability-casting)
     rdocApi->EndFrameCapture(RENDERDOC_DEVICEPOINTER_FROM_VKINSTANCE(mgr.getVkInstance().get()), nullptr);
 }
-
 #endif
 }  // namespace sim
