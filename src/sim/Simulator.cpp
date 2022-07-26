@@ -32,7 +32,7 @@ void Simulator::init() {
 #endif
 
     // Load map:
-    map = Map::load_from_file("/home/sauter/Documents/Repos/movement-sim/munich.json");
+    map = Map::load_from_file("/home/fabian/Documents/Repos/movement-sim/munich.json");
 
     shader = std::vector(RANDOM_MOVE_COMP_SPV.begin(), RANDOM_MOVE_COMP_SPV.end());
 
@@ -134,6 +134,7 @@ void Simulator::sim_worker() {
 
     // Ensure the data is on the GPU:
     std::shared_ptr<kp::Sequence> sendSeq = mgr.sequence()->record<kp::OpTensorSyncDevice>(params);
+    // std::shared_ptr<kp::Sequence> sendEntitiesSeq = mgr.sequence()->record<kp::OpTensorSyncDevice>({tensorEntities});
     sendSeq->evalAsync();
     std::shared_ptr<kp::Sequence> calcSeq = mgr.sequence()->record<kp::OpAlgoDispatch>(algo);
     std::shared_ptr<kp::Sequence> retrieveSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>({tensorEntities});
