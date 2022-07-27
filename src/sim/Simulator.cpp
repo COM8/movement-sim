@@ -2,10 +2,12 @@
 #include "fall.hpp"
 #include "kompute/Tensor.hpp"
 #include "logger/Logger.hpp"
+#include "quadtree/Quadtree.h"
 #include "random_move.hpp"
 #include "sim/Entity.hpp"
 #include "sim/Map.hpp"
 #include "sim/PushConsts.hpp"
+#include "sim/quadtree/Box.h"
 #include "spdlog/spdlog.h"
 #include "vulkan/vulkan_enums.hpp"
 #include <algorithm>
@@ -134,14 +136,27 @@ void Simulator::sim_worker() {
 
     // Ensure the data is on the GPU:
     std::shared_ptr<kp::Sequence> sendSeq = mgr.sequence()->record<kp::OpTensorSyncDevice>(params);
-    // std::shared_ptr<kp::Sequence> sendEntitiesSeq = mgr.sequence()->record<kp::OpTensorSyncDevice>({tensorEntities});
+    std::shared_ptr<kp::Sequence> sendEntitiesSeq = mgr.sequence()->record<kp::OpTensorSyncDevice>({tensorEntities});
     sendSeq->evalAsync();
     std::shared_ptr<kp::Sequence> calcSeq = mgr.sequence()->record<kp::OpAlgoDispatch>(algo);
     std::shared_ptr<kp::Sequence> retrieveSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>({tensorEntities});
     sendSeq->evalAwait();
 
     // Make sure we have started receiving once:
-    retrieveSeq->evalAsync();
+    // retrieveSeq->evalAsync();
+
+    // QuadTree collision detection:
+    auto getBox = [](Entity* entity) {
+        return quadtree::Box<float>(entity->pos.x - 5, entity->pos.y - 5, 10, 10);
+    };
+    quadtree::Quadtree<Entity*, decltype(getBox)> quadTree(quadtree::Box<float>(0, 0, map->width, map->height), getBox);
+
+    for (size_t i = 0; i < entities->size(); i++) {
+        quadTree.add(&((*entities)[i]));
+    }
+
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+    std::vector<std::pair<Entity*, Entity*>> intersections = quadTree.findAllIntersections();
 
     std::unique_lock<std::mutex> lk(waitMutex);
     while (state == SimulatorState::RUNNING) {
@@ -151,25 +166,27 @@ void Simulator::sim_worker() {
         if (!simulating) {
             continue;
         }
-        sim_tick(sendSeq, calcSeq, retrieveSeq);
+        sim_tick(sendSeq, sendEntitiesSeq, calcSeq, retrieveSeq);
     }
 }
 
-void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveSeq) {
+void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared_ptr<kp::Sequence>& sendEntitiesSeq, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveSeq) {
     std::chrono::high_resolution_clock::time_point tickStart = std::chrono::high_resolution_clock::now();
 
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
     start_frame_capture();
 #endif
+    sendEntitiesSeq->eval();
     calcSeq->eval();
+    retrieveSeq->eval();
     // std::this_thread::sleep_for(std::chrono::milliseconds(100));
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
     end_frame_capture();
 #endif
     if (!entities) {
-        retrieveSeq->evalAwait();
+        // retrieveSeq->evalAwait();
         entities = std::make_shared<std::vector<Entity>>(tensorEntities->vector<Entity>());
-        retrieveSeq->evalAsync();
+        // retrieveSeq->evalAsync();
         // for (const Entity& e : *entities) {
         //     assert(e.target.x >= 0 && e.target.x <= WORLD_SIZE_X);
         //     assert(e.target.y >= 0 && e.target.y <= WORLD_SIZE_Y);

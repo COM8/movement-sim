@@ -27,6 +27,10 @@ enum class SimulatorState {
     JOINING
 };
 
+struct QuadTreeNode {
+    Entity* entity;
+};
+
 constexpr size_t MAX_ENTITIES = 1000000;
 constexpr float MAX_RENDER_RESOLUTION_X = 8192;  // Larger values result in errors when creating frame buffers
 constexpr float MAX_RENDER_RESOLUTION_Y = 8192;
@@ -89,7 +93,7 @@ class Simulator {
 
  private:
     void sim_worker();
-    void sim_tick(std::shared_ptr<kp::Sequence>& sendSeq, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveSeq);
+    void sim_tick(std::shared_ptr<kp::Sequence>& sendSeq, std::shared_ptr<kp::Sequence>& sendEntitiesSeq, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveSeq);
     void add_entities();
     void check_device_queues();
 
