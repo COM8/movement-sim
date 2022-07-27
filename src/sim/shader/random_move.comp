@@ -37,6 +37,139 @@ precision highp float;
 precision highp int;
 
 // ------------------------------------------------------------------------------------
+// Quad Tree
+// ------------------------------------------------------------------------------------
+uint TYPE_INVALID = 0;
+uint TYPE_LEVEL = 1;
+uint TYPE_ENTITY = 2;
+
+struct QuadTreeLevelDescriptor {
+    uint typeTL;
+    uint firstTL;
+    uint countTL;
+
+    uint typeTR;
+    uint firstTR;
+    uint countTR;
+
+    uint typeBL;
+    uint firstBL;
+    uint countBL;
+
+    uint typeBR;
+    uint firstBR;
+    uint countBR;
+
+    float offsetX;
+    float offsetY;
+    float width;
+    float height;
+
+    uint locked;
+};
+
+struct QuadTreeEntityDescriptor {
+    uint index;
+    uint locked;
+
+    uint typeNext;
+    uint next;
+
+    uint typePrev;
+    uint prev;
+};
+
+// TODO add memory qualifiers: https://www.khronos.org/opengl/wiki/Shader_Storage_Buffer_Object
+layout(set = 0, binding = 3, std430) buffer bufQuadTreeLevels { QuadTreeLevelDescriptor quadTreeLevels[]; };
+layout(set = 0, binding = 4, std430) buffer bufQuadTreeEntities { QuadTreeEntityDescriptor quadTreeEntities[]; };
+
+void lock_level(uint levelIndex) {
+    while(atomicCompSwap(quadTreeLevels[levelIndex].locked, 0, 1) == 1) {}
+}
+
+void unlock_level(uint levelIndex) {
+    quadTreeLevels[levelIndex].locked = 0;
+}
+
+void wait_for_level_unlocked(uint levelIndex) {
+    while(quadTreeLevels[levelIndex].locked != 0) {}
+}
+
+void quad_tree_append_entity(inout QuadTreeEntityDescriptor entity, uint index) {
+    if(entity.typeNext != TYPE_INVALID) {
+
+    }
+    else {
+
+    }
+
+    quadTreeEntities[index + 1].locked = 1;
+
+    quadTreeEntities[index + 1].locked = 0;
+}
+
+void quad_tree_init_entity(inout QuadTreeEntityDescriptor entity, uint entityIndex, uint typePrev, uint prev) {
+    entity.index = entityIndex;
+    entity.typeNext = TYPE_INVALID;
+    entity.next = 0;    
+    entity.typePrev = typePrev;
+    entity.prev = prev;
+}
+
+void quad_tree_insert(uint index, uint levelIndex) {
+    wait_for_level_unlocked(levelIndex);
+
+    vec2 ePos = entities[index].pos;
+    float offsetXNext = quadTreeLevels[levelIndex].offsetX + (quadTreeLevels[levelIndex].width / 2);
+    float offsetYNext = quadTreeLevels[levelIndex].offsetY + (quadTreeLevels[levelIndex].height / 2);
+    // Left:
+    if(ePos.x < offsetXNext) {
+        // Top:
+        if(ePos.y < offsetYNext) {
+            if(quadTreeLevels[levelIndex].typeTL == TYPE_ENTITY) { // Entity list
+                lock_level(levelIndex);
+                unlock_level(levelIndex);
+            }
+            else if (quadTreeLevels[levelIndex].typeTL == TYPE_LEVEL) {
+                // quad_tree_insert(index, quadTreeLevels[levelIndex].firstTL); // Recursion is not allowed
+            }
+            else {
+                lock_level(levelIndex);
+                // Init entity:
+                quadTreeEntities[index + 1].locked = 1;
+                quad_tree_init_entity(quadTreeEntities[index + 1], index, TYPE_LEVEL, levelIndex);
+                quadTreeEntities[index + 1].locked = 0;
+
+                // Update level:
+                quadTreeLevels[levelIndex].firstTL = index + 1;
+                quadTreeLevels[levelIndex].typeTL = TYPE_ENTITY;
+                quadTreeLevels[levelIndex].countTL = 1;
+                unlock_level(levelIndex);
+            }
+        }
+        // Bottom:
+        else {
+
+        }
+    }
+    // Right:
+    else {
+        // Top:
+        if(ePos.y < offsetYNext) {
+
+        }
+        // Bottom:
+        else {
+
+        }
+    }
+}
+
+void quad_tree_update(uint index, uint levelIndex) {
+    wait_for_level_unlocked(levelIndex);
+}
+
+// ------------------------------------------------------------------------------------
 // 128 Bit XOR-Shift
 // Source: https://en.wikipedia.org/wiki/Xorshift
 // ------------------------------------------------------------------------------------
@@ -184,11 +317,13 @@ void main() {
     // return;
 
     if(!entities[index].initialized) {
+        quad_tree_insert(index, 0);
         entities[index].initialized = true;
     }
 
     update_direction(index);
     move(index);
+    quad_tree_update(index, 0);
     if(check_collision(index)) {
         // set_random_color(index);
     }

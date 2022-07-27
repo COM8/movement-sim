@@ -4,6 +4,7 @@
 #include "logger/Logger.hpp"
 #include "random_move.hpp"
 #include "sim/Entity.hpp"
+#include "sim/GpuQuadTree.hpp"
 #include "sim/Map.hpp"
 #include "sim/PushConsts.hpp"
 #include "spdlog/spdlog.h"
@@ -12,6 +13,7 @@
 #include <cassert>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <kompute/operations/OpTensorSyncDevice.hpp>
 #include <kompute/operations/OpTensorSyncLocal.hpp>
 #include <memory>
@@ -38,13 +40,22 @@ void Simulator::init() {
 
     // Entities:
     add_entities();
-    tensorEntities = mgr.tensor(entities->data(), entities->size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eDouble);
+    tensorEntities = mgr.tensor(entities->data(), entities->size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
     // Uniform data:
-    tensorRoads = mgr.tensor(map->roads.data(), map->roads.size(), sizeof(Road), kp::Tensor::TensorDataTypes::eDouble);
+    tensorRoads = mgr.tensor(map->roads.data(), map->roads.size(), sizeof(Road), kp::Tensor::TensorDataTypes::eUnsignedInt);
     tensorConnections = mgr.tensor(map->connections.data(), map->connections.size(), sizeof(unsigned int), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
-    params = {tensorEntities, tensorConnections, tensorRoads};
+    // Quad Tree:
+    static_assert(sizeof(gpu_quad_tree::Entity) == sizeof(uint32_t) * 6, "Quad Tree entity size does not match. Expected to be constructed out of 6 uint32_t.");
+    quadTreeEntities.resize(MAX_ENTITIES + 1);  // +1 since entity index 0 is invalid
+    tensorQuadTreeEntities = mgr.tensor(quadTreeEntities.data(), quadTreeEntities.size(), sizeof(gpu_quad_tree::Entity), kp::Tensor::TensorDataTypes::eUnsignedInt);
+
+    static_assert(sizeof(gpu_quad_tree::Level) == sizeof(uint32_t) * 13 + sizeof(float) * 4, "Quad Tree level size does not match. Expected to be constructed out of 13 uint32_t.");
+    quadTreeLevels.resize(MAX_ENTITIES);
+    tensorQuadTreeLevels = mgr.tensor(quadTreeLevels.data(), quadTreeLevels.size(), sizeof(gpu_quad_tree::Level), kp::Tensor::TensorDataTypes::eUnsignedInt);
+
+    params = {tensorEntities, tensorConnections, tensorRoads, tensorQuadTreeLevels, tensorQuadTreeEntities};
 
     // Push constants:
     PushConsts pushConsts{};

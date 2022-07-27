@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GpuQuadTree.hpp"
 #include "sim/Entity.hpp"
 #include "utils/TickDurationHistory.hpp"
 #include "utils/TickRate.hpp"
@@ -31,6 +32,10 @@ constexpr size_t MAX_ENTITIES = 1000000;
 constexpr float MAX_RENDER_RESOLUTION_X = 8192;  // Larger values result in errors when creating frame buffers
 constexpr float MAX_RENDER_RESOLUTION_Y = 8192;
 
+// -----------------QuadTree-----------------
+constexpr size_t QUAD_TREE_ENTITIES_SIZE = sizeof(gpu_quad_tree::Entity) * MAX_ENTITIES;
+constexpr size_t QUAD_TREE_LEVELS_SIZE = sizeof(gpu_quad_tree::Level) * MAX_ENTITIES;
+// ------------------------------------------
 class Simulator {
  private:
     bool initialized{false};
@@ -56,6 +61,14 @@ class Simulator {
     std::shared_ptr<kp::Tensor> tensorRoads{nullptr};
 
     std::shared_ptr<Map> map{nullptr};
+
+    // -----------------QuadTree-----------------
+    std::vector<gpu_quad_tree::Entity> quadTreeEntities;
+    std::vector<gpu_quad_tree::Level> quadTreeLevels;
+
+    std::shared_ptr<kp::Tensor> tensorQuadTreeEntities{nullptr};
+    std::shared_ptr<kp::Tensor> tensorQuadTreeLevels{nullptr};
+    // ------------------------------------------
 
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
     RENDERDOC_API_1_4_2* rdocApi{nullptr};
