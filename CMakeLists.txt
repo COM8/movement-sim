@@ -97,12 +97,12 @@ FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git
                             GIT_TAG v1.9.2)
 FetchContent_MakeAvailable(spdlog)
 
-set(KOMPUTE_OPT_DISABLE_VK_DEBUG_LAYERS ON) # Version clash since they are not properly supported on my GPU.
+set(KOMPUTE_OPT_DISABLE_VK_DEBUG_LAYERS OFF) # Version clash since they are not properly supported on my GPU.
 set(KOMPUTE_OPT_USE_BUILT_IN_VULKAN_HEADER ON)
 set(KOMPUTE_OPT_BUILD_SHADERS ON)
-set(KOMPUTE_OPT_LOG_LEVEL "Off")
+# set(KOMPUTE_OPT_LOG_LEVEL "Off")
 FetchContent_Declare(kompute GIT_REPOSITORY https://github.com/COM8/kompute.git
-                             GIT_TAG a011673a8936d4b85340238de82e3e187b701f92)
+                             GIT_TAG 23677a86a86722b8e66df20829804fc007443568)
 FetchContent_MakeAvailable(kompute)
 include_directories(${kompute_SOURCE_DIR}/src/include)
 
