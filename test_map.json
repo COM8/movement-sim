@@ -1,0 +1,102 @@
+{
+    "minDistLat": 0,
+    "maxDistLat": 100,
+    "minDistLong": 0,
+    "maxDistLong": 100,
+    "roads": [
+        {
+            "start": {
+                "lat": 0,
+                "long": 0,
+                "distLat": 5,
+                "distLong": 5
+            },
+            "end": {
+                "lat": 0,
+                "long": 0,
+                "distLat": 50,
+                "distLong": 50
+            },
+            "connIndexStart": 0,
+            "connCountStart": 1,
+            "connIndexEnd": 1,
+            "connCountEnd": 4
+        },
+        {
+            "start": {
+                "lat": 0,
+                "long": 0,
+                "distLat": 95,
+                "distLong": 5
+            },
+            "end": {
+                "lat": 0,
+                "long": 0,
+                "distLat": 50,
+                "distLong": 50
+            },
+            "connIndexStart": 5,
+            "connCountStart": 1,
+            "connIndexEnd": 6,
+            "connCountEnd": 4
+        },
+        {
+            "start": {
+                "lat": 0,
+                "long": 0,
+                "distLat": 5,
+                "distLong": 95
+            },
+            "end": {
+                "lat": 0,
+                "long": 0,
+                "distLat": 50,
+                "distLong": 50
+            },
+            "connIndexStart": 10,
+            "connCountStart": 1,
+            "connIndexEnd": 11,
+            "connCountEnd": 4
+        },
+        {
+            "start": {
+                "lat": 0,
+                "long": 0,
+                "distLat": 95,
+                "distLong": 95
+            },
+            "end": {
+                "lat": 0,
+                "long": 0,
+                "distLat": 50,
+                "distLong": 50
+            },
+            "connIndexStart": 15,
+            "connCountStart": 1,
+            "connIndexEnd": 16,
+            "connCountEnd": 4
+        }
+    ],
+    "connectionRoadIndexList": [
+        0,
+        0,
+        1,
+        2,
+        3,
+        1,
+        1,
+        0,
+        2,
+        3,
+        2,
+        2,
+        1,
+        0,
+        3,
+        3,
+        3,
+        1,
+        2,
+        0
+    ]
+}

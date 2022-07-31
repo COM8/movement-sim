@@ -10,43 +10,55 @@ enum class NextType : uint32_t {
     ENTITY = 2
 };
 
-// NOLINTNEXTLINE (altera-struct-pack-align) Ignore alignment since we only need it for size calculation.
+// NOLINTNEXTLINE (altera-struct-pack-align) Ignore alignment since we need a compact layout.
 struct Level {
-    NextType typeTL{NextType::INVALID};
-    uint32_t firstTL{0};
-    uint32_t countTL{0};
-
-    NextType typeTR{NextType::INVALID};
-    uint32_t firstTR{0};
-    uint32_t countTR{0};
-
-    NextType typeBL{NextType::INVALID};
-    uint32_t firstBL{0};
-    uint32_t countBL{0};
-
-    NextType typeBR{NextType::INVALID};
-    uint32_t firstBR{0};
-    uint32_t countBR{0};
+    uint32_t acquireLock{0};
+    uint32_t writeLock{0};
+    uint32_t readerLock{0};
 
     float offsetX{0};
     float offsetY{0};
     float width{0};
     float height{0};
 
-    uint32_t locked{0};
-} __attribute__((aligned(4)));
+    /**
+     * NextType::INVALID - Has no entities and all sublevels are not populated.
+     * NextType::LEVEL - Has no direct entities but sub levels are populated.
+     * NextType::ENTITY - Has entities and no sublevels.
+     **/
+    NextType contentType{NextType::INVALID};
+    uint32_t entityCount{0};
+    uint32_t first{0};
 
-// NOLINTNEXTLINE (altera-struct-pack-align) Ignore alignment since we only need it for size calculation.
+    uint32_t prevLevelIndex{0};
+
+    uint32_t nextTL{0};
+    uint32_t nextTR{0};
+    uint32_t nextBL{0};
+    uint32_t nextBR{0};
+} __attribute__((packed)) __attribute__((aligned(4)));
+
+// NOLINTNEXTLINE (altera-struct-pack-align) Ignore alignment since we need a compact layout.
 struct Entity {
     uint32_t index{0};
     uint32_t locked{0};
 
+    /**
+     * NextType::INVALID - This is the last entity in the line.
+     * NextType::LEVEL - Never.
+     * NextType::ENTITY - Points to the next entity in this node.
+     **/
     NextType typeNext{NextType::INVALID};
     uint32_t next{0};
 
+    /**
+     * NextType::INVALID - Never.
+     * NextType::LEVEL - Points to the level, the entity is contained in.
+     * NextType::ENTITY - Points to the previous entity in this node.
+     **/
     NextType typePrev{NextType::INVALID};
     uint32_t prev{0};
-} __attribute__((aligned(4)));
+} __attribute__((packed)) __attribute__((aligned(4)));
 
 void init_level_zero(Level& level, float worldSizeX, float worldSizeY);
 }  // namespace sim::gpu_quad_tree

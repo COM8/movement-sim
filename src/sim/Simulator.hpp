@@ -28,14 +28,10 @@ enum class SimulatorState {
     JOINING
 };
 
-constexpr size_t MAX_ENTITIES = 1000000;
-constexpr float MAX_RENDER_RESOLUTION_X = 8192;  // Larger values result in errors when creating frame buffers
-constexpr float MAX_RENDER_RESOLUTION_Y = 8192;
+constexpr size_t MAX_ENTITIES = 5;
+constexpr float MAX_RENDER_RESOLUTION_X = 100;  // Larger values result in errors when creating frame buffers
+constexpr float MAX_RENDER_RESOLUTION_Y = 100;
 
-// -----------------QuadTree-----------------
-constexpr size_t QUAD_TREE_ENTITIES_SIZE = sizeof(gpu_quad_tree::Entity) * MAX_ENTITIES;
-constexpr size_t QUAD_TREE_LEVELS_SIZE = sizeof(gpu_quad_tree::Level) * MAX_ENTITIES;
-// ------------------------------------------
 class Simulator {
  private:
     bool initialized{false};
@@ -65,9 +61,11 @@ class Simulator {
     // -----------------QuadTree-----------------
     std::vector<gpu_quad_tree::Entity> quadTreeEntities;
     std::vector<gpu_quad_tree::Level> quadTreeLevels;
+    std::vector<uint32_t> quadTreeLevelUsedStatus;
 
     std::shared_ptr<kp::Tensor> tensorQuadTreeEntities{nullptr};
     std::shared_ptr<kp::Tensor> tensorQuadTreeLevels{nullptr};
+    std::shared_ptr<kp::Tensor> tensorQuadTreeLevelUsedStatus{nullptr};
     // ------------------------------------------
 
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
