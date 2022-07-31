@@ -26,6 +26,7 @@ struct RoadDescriptor {
 layout(push_constant) uniform PushConstants {
 	float worldSizeX;
 	float worldSizeY;
+	uint levelCount;
 } pushConsts;
 
 layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
@@ -44,28 +45,25 @@ uint TYPE_LEVEL = 1;
 uint TYPE_ENTITY = 2;
 
 struct QuadTreeLevelDescriptor {
-    uint typeTL;
-    uint firstTL;
-    uint countTL;
-
-    uint typeTR;
-    uint firstTR;
-    uint countTR;
-
-    uint typeBL;
-    uint firstBL;
-    uint countBL;
-
-    uint typeBR;
-    uint firstBR;
-    uint countBR;
-
+    uint acquireLock;
+    uint writeLock;
+    uint readerLock;
+    
     float offsetX;
     float offsetY;
     float width;
     float height;
+    
+    uint contentType;
+    uint entityCount;
+    uint first;
 
-    uint locked;
+    uint prevLevelIndex;
+
+    uint nextTL;
+    uint nextTR;
+    uint nextBL;
+    uint nextBR;
 };
 
 struct QuadTreeEntityDescriptor {
@@ -82,91 +80,226 @@ struct QuadTreeEntityDescriptor {
 // TODO add memory qualifiers: https://www.khronos.org/opengl/wiki/Shader_Storage_Buffer_Object
 layout(set = 0, binding = 3, std430) buffer bufQuadTreeLevels { QuadTreeLevelDescriptor quadTreeLevels[]; };
 layout(set = 0, binding = 4, std430) buffer bufQuadTreeEntities { QuadTreeEntityDescriptor quadTreeEntities[]; };
+/**
+ * [0]: Lock
+ * [1]: Next free hint
+ * [2... (levelCount + 2)]: Level locks 
+ **/
+layout(set = 0, binding = 5, std430) buffer bufQuadTreeLevelStatus { uint quadTreeLevelUsedStatus[]; };
 
-void lock_level(uint levelIndex) {
-    while(atomicCompSwap(quadTreeLevels[levelIndex].locked, 0, 1) == 1) {}
+uint LEVEL_ENTITY_CAP = 1;
+
+void quad_tree_lock_level_read(uint levelIndex) {
+    while(atomicCompSwap(quadTreeLevels[levelIndex].acquireLock, 0, 1) != 0) {}
+    
+    // Prevent from reading, when we are currently writing:
+    while(quadTreeLevels[levelIndex].writeLock != 0) {}
+    atomicAdd(quadTreeLevels[levelIndex].readerLock, 1);
+
+    atomicExchange(quadTreeLevels[levelIndex].acquireLock, 0);
 }
 
-void unlock_level(uint levelIndex) {
-    quadTreeLevels[levelIndex].locked = 0;
+void quad_tree_unlock_level_read(uint levelIndex) {
+    // Atomic subtraction since there is no atomicSub in glsl:
+    while(true) {
+        uint expected = quadTreeLevels[levelIndex].readerLock;
+        uint newVal = expected - 1;
+        if(atomicCompSwap(quadTreeLevels[levelIndex].readerLock, expected, newVal) == expected) {
+            break;
+        }
+    }
 }
 
-void wait_for_level_unlocked(uint levelIndex) {
-    while(quadTreeLevels[levelIndex].locked != 0) {}
+void quad_tree_lock_level_write(uint levelIndex) {
+    while(atomicCompSwap(quadTreeLevels[levelIndex].acquireLock, 0, 1) != 0) {}
+    
+    // Wait until all others stopped reading:
+    while(quadTreeLevels[levelIndex].readerLock != 0) {}
+    while(atomicCompSwap(quadTreeLevels[levelIndex].writeLock, 0, 1) != 0) {}
+
+    atomicExchange(quadTreeLevels[levelIndex].acquireLock, 0);
 }
 
-void quad_tree_append_entity(inout QuadTreeEntityDescriptor entity, uint index) {
-    if(entity.typeNext != TYPE_INVALID) {
+void quad_tree_unlock_level_write(uint levelIndex) {
+    atomicExchange(quadTreeLevels[levelIndex].writeLock, 0);
+}
 
+void quad_tree_init_entity(uint index, uint entityIndex, uint typePrev, uint prev) {
+    quadTreeEntities[entityIndex].index = index;
+    quadTreeEntities[entityIndex].typeNext = TYPE_INVALID;
+    quadTreeEntities[entityIndex].next = 0;    
+    quadTreeEntities[entityIndex].typePrev = typePrev;
+    quadTreeEntities[entityIndex].prev = prev;
+}
+
+void quad_tree_append_entity(uint levelIndex, uint index) {
+    uint entityIndex = index + 1;
+    if(quadTreeLevels[levelIndex].entityCount <= 0) {
+        quadTreeLevels[levelIndex].first = entityIndex;
+        quad_tree_init_entity(index, entityIndex, TYPE_LEVEL, levelIndex);
     }
     else {
+        // Add in front:
+        uint oldFirstEntityIndex = quadTreeLevels[levelIndex].first;
+        quad_tree_init_entity(index, entityIndex, TYPE_LEVEL, levelIndex);
+        quadTreeEntities[entityIndex].typeNext = TYPE_ENTITY;
+        quadTreeEntities[entityIndex].next = oldFirstEntityIndex;
 
+        quadTreeEntities[oldFirstEntityIndex].typePrev = TYPE_ENTITY;
+        quadTreeEntities[oldFirstEntityIndex].prev = entityIndex;
+
+        quadTreeLevels[levelIndex].first = entityIndex;
     }
-
-    quadTreeEntities[index + 1].locked = 1;
-
-    quadTreeEntities[index + 1].locked = 0;
+    quadTreeLevels[levelIndex].entityCount++;
 }
 
-void quad_tree_init_entity(inout QuadTreeEntityDescriptor entity, uint entityIndex, uint typePrev, uint prev) {
-    entity.index = entityIndex;
-    entity.typeNext = TYPE_INVALID;
-    entity.next = 0;    
-    entity.typePrev = typePrev;
-    entity.prev = prev;
+/**
+ * Moves up the quad tree and unlocks all levels from reading again.
+ **/
+void quad_tree_unlock_levels_read(uint levelIndex) {
+    while(quadTreeLevels[levelIndex].prevLevelIndex != levelIndex) {
+        uint oldLevelIndex = levelIndex;
+        levelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
+        quad_tree_unlock_level_read(oldLevelIndex);
+    }
+    // Unlock the first level:
+    quad_tree_unlock_level_read(levelIndex);
 }
 
-void quad_tree_insert(uint index, uint levelIndex) {
-    wait_for_level_unlocked(levelIndex);
+uint quad_tree_get_free_level_index() {
+    uint index = 0;
+    uint i = quadTreeLevelUsedStatus[1];
+    while(index <= 0) {
+        if(quadTreeLevelUsedStatus[i] == 0) {
+            quadTreeLevelUsedStatus[i] = 1;
+            index = i - 2;
+        }
 
+        i++;
+        if(i >= (pushConsts.levelCount + 2)) {
+            i = 2;
+        }
+    }
+    quadTreeLevelUsedStatus[1] = i;
+    return index;
+}
+
+uvec4 quad_tree_get_free_level_indices() {
+    uvec4 indices = uvec4(0);
+    while(atomicCompSwap(quadTreeLevelUsedStatus[0], 0, 1) != 0) {}
+    
+    indices.x = quad_tree_get_free_level_index();
+    indices.y = quad_tree_get_free_level_index();
+    indices.z = quad_tree_get_free_level_index();
+    indices.w = quad_tree_get_free_level_index();
+
+    atomicExchange(quadTreeLevelUsedStatus[0], 0);
+
+    return indices;
+}
+
+void quad_tree_init_level(uint levelIndex, uint prevLevelIndex, float offsetX, float offsetY, float width, float height) {
+    quadTreeLevels[levelIndex].acquireLock = 0;
+    quadTreeLevels[levelIndex].writeLock = 0;
+    quadTreeLevels[levelIndex].readerLock = 0;
+
+    quadTreeLevels[levelIndex].offsetX = offsetX;
+    quadTreeLevels[levelIndex].offsetY = offsetY;
+    quadTreeLevels[levelIndex].width = width;
+    quadTreeLevels[levelIndex].height = height;
+
+    quadTreeLevels[levelIndex].prevLevelIndex = prevLevelIndex;
+    quadTreeLevels[levelIndex].contentType = TYPE_INVALID;
+}
+
+void quad_tree_split_up_level(uint levelIndex) {
+    quadTreeLevels[levelIndex].contentType = TYPE_LEVEL;
+
+    uvec4 newLevelIndices = quad_tree_get_free_level_indices();
+
+    float newWidth = quadTreeLevels[levelIndex].width / 2;
+    float newHeight = quadTreeLevels[levelIndex].height / 2;
+
+    quadTreeLevels[levelIndex].nextTL = newLevelIndices.x;
+    quad_tree_init_level(quadTreeLevels[levelIndex].nextTL, levelIndex, quadTreeLevels[levelIndex].offsetX, quadTreeLevels[levelIndex].offsetY, newWidth, newHeight);
+    quadTreeLevels[levelIndex].nextTR = newLevelIndices.y;
+    quad_tree_init_level(quadTreeLevels[levelIndex].nextTR, levelIndex, quadTreeLevels[levelIndex].offsetX + newWidth, quadTreeLevels[levelIndex].offsetY, newWidth, newHeight);
+    quadTreeLevels[levelIndex].nextBL = newLevelIndices.z;
+    quad_tree_init_level(quadTreeLevels[levelIndex].nextBL, levelIndex, quadTreeLevels[levelIndex].offsetX, quadTreeLevels[levelIndex].offsetY + newHeight, newWidth, newHeight);
+    quadTreeLevels[levelIndex].nextBR = newLevelIndices.w;
+    quad_tree_init_level(quadTreeLevels[levelIndex].nextBR, levelIndex, quadTreeLevels[levelIndex].offsetX + newWidth, quadTreeLevels[levelIndex].offsetY + newHeight, newWidth, newHeight);
+}
+
+void quad_tree_insert(uint index) {
     vec2 ePos = entities[index].pos;
-    float offsetXNext = quadTreeLevels[levelIndex].offsetX + (quadTreeLevels[levelIndex].width / 2);
-    float offsetYNext = quadTreeLevels[levelIndex].offsetY + (quadTreeLevels[levelIndex].height / 2);
-    // Left:
-    if(ePos.x < offsetXNext) {
-        // Top:
-        if(ePos.y < offsetYNext) {
-            if(quadTreeLevels[levelIndex].typeTL == TYPE_ENTITY) { // Entity list
-                lock_level(levelIndex);
-                unlock_level(levelIndex);
+
+    uint levelIndex = 0;
+    while(true) {
+        quad_tree_lock_level_read(levelIndex);
+        float offsetXNext = quadTreeLevels[levelIndex].offsetX + (quadTreeLevels[levelIndex].width / 2);
+        float offsetYNext = quadTreeLevels[levelIndex].offsetY + (quadTreeLevels[levelIndex].height / 2);
+
+        // Go one level deeper:
+        if(quadTreeLevels[levelIndex].contentType == TYPE_LEVEL) {
+            // Left:
+            if(ePos.x < offsetXNext)  {
+                // Top:
+                if(ePos.y < offsetYNext) {
+                    levelIndex = quadTreeLevels[levelIndex].nextTL;
+                }
+                else {
+                    levelIndex = quadTreeLevels[levelIndex].nextBL;
+                }
             }
-            else if (quadTreeLevels[levelIndex].typeTL == TYPE_LEVEL) {
-                // quad_tree_insert(index, quadTreeLevels[levelIndex].firstTL); // Recursion is not allowed
-            }
+            // Right:
             else {
-                lock_level(levelIndex);
-                // Init entity:
-                quadTreeEntities[index + 1].locked = 1;
-                quad_tree_init_entity(quadTreeEntities[index + 1], index, TYPE_LEVEL, levelIndex);
-                quadTreeEntities[index + 1].locked = 0;
-
-                // Update level:
-                quadTreeLevels[levelIndex].firstTL = index + 1;
-                quadTreeLevels[levelIndex].typeTL = TYPE_ENTITY;
-                quadTreeLevels[levelIndex].countTL = 1;
-                unlock_level(levelIndex);
+                // Top:
+                if(ePos.y < offsetYNext) {
+                    levelIndex = quadTreeLevels[levelIndex].nextTR;
+                }
+                else {
+                    levelIndex = quadTreeLevels[levelIndex].nextBR;
+                }
             }
         }
-        // Bottom:
         else {
-
+            // Insert the entity:
+            if(quadTreeLevels[levelIndex].entityCount < LEVEL_ENTITY_CAP) {
+                quad_tree_unlock_level_read(levelIndex);
+                quad_tree_lock_level_write(levelIndex);
+                if(quadTreeLevels[levelIndex].entityCount >= LEVEL_ENTITY_CAP || quadTreeLevels[levelIndex].contentType == TYPE_LEVEL) {
+                    // Something has changed in the meantime with the level. Retry...
+                    levelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
+                    quad_tree_unlock_level_write(levelIndex);
+                }
+                else {
+                    quad_tree_append_entity(levelIndex, index);
+                    quad_tree_unlock_level_write(levelIndex);
+                    break;
+                }
+            }
+            // Split up
+            else {
+                quad_tree_unlock_level_read(levelIndex);
+                quad_tree_lock_level_write(levelIndex);
+                if(quadTreeLevels[levelIndex].entityCount < LEVEL_ENTITY_CAP || quadTreeLevels[levelIndex].contentType == TYPE_LEVEL) {
+                    // Something has changed in the meantime with the level. Retry...
+                    levelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
+                    quad_tree_unlock_level_write(levelIndex);
+                }
+                else {
+                    quad_tree_split_up_level(levelIndex);
+                    quad_tree_unlock_level_write(levelIndex);
+                }
+            }
         }
     }
-    // Right:
-    else {
-        // Top:
-        if(ePos.y < offsetYNext) {
-
-        }
-        // Bottom:
-        else {
-
-        }
-    }
+    // Unlock all levels again:
+    quad_tree_unlock_levels_read(levelIndex);
 }
 
-void quad_tree_update(uint index, uint levelIndex) {
-    wait_for_level_unlocked(levelIndex);
+void quad_tree_update(uint index) {
+    // quad_tree_wait_for_level_unlocked(levelIndex);
 }
 
 // ------------------------------------------------------------------------------------
@@ -313,17 +446,14 @@ void move(uint index) {
 void main() {
     uint index = gl_GlobalInvocationID.x;
 
-    // entities[index].pos = vec2(next(entities[index].randState, 1, 2), next(entities[index].randState, 1, 3));
-    // return;
-
     if(!entities[index].initialized) {
-        quad_tree_insert(index, 0);
+        quad_tree_insert(index);
         entities[index].initialized = true;
     }
 
     update_direction(index);
     move(index);
-    quad_tree_update(index, 0);
+    quad_tree_update(index);
     if(check_collision(index)) {
         // set_random_color(index);
     }
