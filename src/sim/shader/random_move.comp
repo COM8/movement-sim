@@ -89,7 +89,7 @@ layout(set = 0, binding = 4, std430) buffer bufQuadTreeEntities { QuadTreeEntity
  **/
 layout(set = 0, binding = 5, std430) buffer bufQuadTreeLevelStatus { uint quadTreeLevelUsedStatus[]; };
 
-uint LEVEL_ENTITY_CAP = 1;
+uint LEVEL_ENTITY_CAP = 100;
 
 void quad_tree_lock_level_read(uint levelIndex) {
     while(atomicCompSwap(quadTreeLevels[levelIndex].acquireLock, 0, 1) != 0) {}

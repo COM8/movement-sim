@@ -34,7 +34,7 @@ void Simulator::init() {
 #endif
 
     // Load map:
-    map = Map::load_from_file("/home/fabian/Documents/Repos/movement-sim/test_map.json");
+    map = Map::load_from_file("/home/fabian/Documents/Repos/movement-sim/munich.json");
 
     shader = std::vector(RANDOM_MOVE_COMP_SPV.begin(), RANDOM_MOVE_COMP_SPV.end());
 
@@ -152,14 +152,10 @@ void Simulator::sim_worker() {
 
     // Ensure the data is on the GPU:
     std::shared_ptr<kp::Sequence> sendSeq = mgr.sequence()->record<kp::OpTensorSyncDevice>(params);
-    // std::shared_ptr<kp::Sequence> sendEntitiesSeq = mgr.sequence()->record<kp::OpTensorSyncDevice>({tensorEntities});
     sendSeq->evalAsync();
     std::shared_ptr<kp::Sequence> calcSeq = mgr.sequence()->record<kp::OpAlgoDispatch>(algo);
     std::shared_ptr<kp::Sequence> retrieveSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>({tensorEntities, tensorQuadTreeLevelUsedStatus, tensorQuadTreeLevels, tensorQuadTreeEntities});
     sendSeq->evalAwait();
-
-    // Make sure we have started receiving once:
-    // retrieveSeq->evalAsync();
 
     std::unique_lock<std::mutex> lk(waitMutex);
     while (state == SimulatorState::RUNNING) {
@@ -185,7 +181,6 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& /*sendSeq*/, std::shared
     end_frame_capture();
 #endif
     if (!entities) {
-        // retrieveSeq->evalAwait();
         retrieveSeq->eval();
         entities = std::make_shared<std::vector<Entity>>(tensorEntities->vector<Entity>());
         quadTreeLevelUsedStatus = tensorQuadTreeLevelUsedStatus->vector<uint32_t>();
