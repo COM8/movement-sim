@@ -12,9 +12,9 @@ enum class NextType : uint32_t {
 
 // NOLINTNEXTLINE (altera-struct-pack-align) Ignore alignment since we need a compact layout.
 struct Level {
-    uint32_t acquireLock{0};
-    uint32_t writeLock{0};
-    uint32_t readerLock{0};
+    int32_t acquireLock{0};
+    int32_t writeLock{0};
+    int32_t readerLock{0};
 
     float offsetX{0};
     float offsetY{0};
