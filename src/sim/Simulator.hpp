@@ -28,9 +28,9 @@ enum class SimulatorState {
     JOINING
 };
 
-constexpr size_t MAX_ENTITIES = 5;
-constexpr float MAX_RENDER_RESOLUTION_X = 100;  // Larger values result in errors when creating frame buffers
-constexpr float MAX_RENDER_RESOLUTION_Y = 100;
+constexpr size_t MAX_ENTITIES = 1000000;
+constexpr float MAX_RENDER_RESOLUTION_X = 8192;  // Larger values result in errors when creating frame buffers
+constexpr float MAX_RENDER_RESOLUTION_Y = 8192;
 
 class Simulator {
  private:
