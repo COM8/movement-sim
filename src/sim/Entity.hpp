@@ -36,8 +36,8 @@ struct Entity {
     Vec2 pos{};
     Vec2 target{};
     Vec2 direction{};
-    unsigned int roadIndex{};
-    bool initialized{false};
+    unsigned int roadIndex{0};
+    unsigned int initialized{0};
 
  public:
     Entity(Rgba&& color, Vec4U&& randomState, Vec2&& pos, Vec2&& target, Vec2&& direction, unsigned int roadIndex, bool initialized);

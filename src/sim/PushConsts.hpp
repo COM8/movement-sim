@@ -8,6 +8,8 @@ namespace sim {
 struct PushConsts {
     float worldSizeX{0};
     float worldSizeY{0};
+
     uint32_t levelCount{0};
+    uint32_t maxDepth{0};
 } __attribute__((packed)) __attribute__((aligned(4)));
 }  // namespace sim
