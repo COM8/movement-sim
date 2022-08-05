@@ -102,7 +102,7 @@ set(KOMPUTE_OPT_USE_BUILT_IN_VULKAN_HEADER ON)
 set(KOMPUTE_OPT_BUILD_SHADERS ON)
 # set(KOMPUTE_OPT_LOG_LEVEL "Off")
 FetchContent_Declare(kompute GIT_REPOSITORY https://github.com/COM8/kompute.git
-                             GIT_TAG 23677a86a86722b8e66df20829804fc007443568)
+                             GIT_TAG ceb5a923fbcd170f12a2bfdee4d09d0e686cb031)
 FetchContent_MakeAvailable(kompute)
 include_directories(${kompute_SOURCE_DIR}/src/include)
 
