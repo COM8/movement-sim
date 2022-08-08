@@ -106,7 +106,7 @@ void QuadTreeGridGlObject::init_internal() {
 }
 
 void QuadTreeGridGlObject::render_internal() {
-    glLineWidth(3);
+    glLineWidth(10);
     glDrawArrays(GL_LINES, 0, verticesCount);
 }
 
