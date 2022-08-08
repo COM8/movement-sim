@@ -6,6 +6,7 @@
 #include "spdlog/fmt/bundled/core.h"
 #include "spdlog/spdlog.h"
 #include "ui/widgets/opengl/fb/MapFrameBuffer.hpp"
+#include "ui/widgets/opengl/fb/QuadTreeGridFrameBuffer.hpp"
 #include <array>
 #include <cassert>
 #include <chrono>
@@ -24,7 +25,8 @@
 namespace ui::widgets {
 SimulationWidget::SimulationWidget() : simulator(sim::Simulator::get_instance()),
                                        mapFrameBuffer(sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y),
-                                       entitiesFrameBuffer(sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y) {
+                                       entitiesFrameBuffer(sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y),
+                                       quadTreeGridFrameBuffer(sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y) {
     prep_widget();
 }
 
@@ -78,6 +80,11 @@ void SimulationWidget::set_blur(bool blur) {
     this->blur = blur;
 }
 
+void SimulationWidget::set_quad_tree_grid_visibility(bool quadTreeGridVisible) {
+    this->quadTreeGridVisible = quadTreeGridVisible;
+    screenSquareObj.set_quad_tree_grid_visibility(quadTreeGridVisible);
+}
+
 //-----------------------------Events:-----------------------------
 bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*ctx*/) {
     assert(simulator);
@@ -94,8 +101,15 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             if (entities) {
                 entitiesChanged = true;
                 this->entities = std::move(entities);
-                // const sim::Entity& e = (*this->entities)[0];
-                // SPDLOG_TRACE("Pos: {}/{} Direction: {}/{} Target: {}/{}", e.pos.x, e.pos.y, e.direction.x, e.direction.y, e.target.x, e.target.y);
+            }
+        }
+
+        bool quadTreeLevelsChanged = false;
+        if (enableUiUpdates) {
+            std::shared_ptr<std::vector<sim::gpu_quad_tree::Level>> quadTreeLevels = simulator->get_quad_tree_levels();
+            if (quadTreeLevels) {
+                quadTreeLevelsChanged = true;
+                this->quadTreeLevels = std::move(quadTreeLevels);
             }
         }
 
@@ -121,7 +135,7 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             mapObj.render();
         }
 
-        // 2.0 Draw to buffer:
+        // 2.0 Draw entities to buffer:
         if (entitiesChanged) {
             entitiesFrameBuffer.bind();
             // 2.1 Blur old entities:
@@ -138,19 +152,32 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             entityObj.render();
         }
 
-        // 3.0 Draw to screen:
+        // 3.0 Draw quad tree to buffer:
+        if (quadTreeLevelsChanged && quadTreeGridVisible) {
+            quadTreeGridFrameBuffer.bind();
+            glClearColor(0, 0, 0, 0);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+            GLERR;
+
+            quadTreeGridGlObj.set_quad_tree_levels(quadTreeLevels);
+            GLERR;
+            quadTreeGridGlObj.render();
+            GLERR;
+        }
+
+        // 4.0 Draw to screen:
         glBindFramebuffer(GL_FRAMEBUFFER, defaultFb);
         GLERR;
 
         // Fix view port so it does not only show values in range [-1,0]:
         glViewport(viewPort[0], viewPort[1], viewPort[2], viewPort[3]);
 
-        // 3.1 Clear the old screen:
+        // 4.1 Clear the old screen:
         glClearColor(0, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         GLERR;
 
-        // 3.2 Draw texture from frame buffer:
+        // 4.2 Draw texture from frame buffer:
         screenSquareObj.render();
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred in the render callback of the GLArea: {} - {} - {}", gle.domain(), gle.code(), gle.what());
@@ -180,6 +207,7 @@ void SimulationWidget::on_realized() {
 
         mapFrameBuffer.init();
         entitiesFrameBuffer.init();
+        quadTreeGridFrameBuffer.init();
 
         // Get default frame buffer since in GTK it is not always 0:
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFb);
@@ -190,7 +218,8 @@ void SimulationWidget::on_realized() {
         blurObject.init();
         blurObject.bind_texture(entitiesFrameBuffer.get_texture());
         entityObj.init();
-        screenSquareObj.bind_texture(mapFrameBuffer.get_texture(), entitiesFrameBuffer.get_texture());
+        quadTreeGridGlObj.init();
+        screenSquareObj.bind_texture(mapFrameBuffer.get_texture(), entitiesFrameBuffer.get_texture(), quadTreeGridFrameBuffer.get_texture());
         screenSquareObj.init();
     } catch (const Gdk::GLError& gle) {
         SPDLOG_ERROR("An error occurred making the context current during realize: {} - {} - {}", gle.domain(), gle.code(), gle.what());
@@ -205,8 +234,10 @@ void SimulationWidget::on_unrealized() {
         mapObj.cleanup();
         blurObject.cleanup();
         entityObj.cleanup();
+        quadTreeGridGlObj.cleanup();
         screenSquareObj.cleanup();
 
+        quadTreeGridFrameBuffer.cleanup();
         entitiesFrameBuffer.cleanup();
         mapFrameBuffer.cleanup();
     } catch (const Gdk::GLError& gle) {

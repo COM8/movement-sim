@@ -14,6 +14,8 @@
     <file>shader/blur/blur.vert</file>
     <file>shader/blur/blur.frag</file>
     <file>shader/blur/blur.geom</file>
+    <file>shader/quadTreeGrid/quadTreeGrid.frag</file>
+    <file>shader/quadTreeGrid/quadTreeGrid.vert</file>
 
     <file preprocess="xml-stripblanks">icons/scalable/action/closed-captioning-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/action/display-with-window-symbolic.svg</file>
@@ -22,5 +24,6 @@
     <file preprocess="xml-stripblanks">icons/scalable/action/play-large-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/action/test-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/action/blur-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/action/transparent-background-symbolic.svg</file>
   </gresource>
 </gresources>

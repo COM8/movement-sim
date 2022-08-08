@@ -89,7 +89,7 @@ layout(set = 0, binding = 4, std430) buffer bufQuadTreeEntities { QuadTreeEntity
  **/
 layout(set = 0, binding = 5, std430) buffer bufQuadTreeLevelStatus { uint quadTreeLevelUsedStatus[]; };
 
-uint LEVEL_ENTITY_CAP = 100;
+uint LEVEL_ENTITY_CAP = 2;
 
 void quad_tree_lock_level_read(uint levelIndex) {
     while(atomicCompSwap(quadTreeLevels[levelIndex].acquireLock, 0, 1) != 0) {}
@@ -506,14 +506,12 @@ void move(uint index) {
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
-    // debugPrintfEXT("Index %d started.", gl_GlobalInvocationID.x);
 
     if(entities[index].initialized == 0) {
         quad_tree_insert(index);
         entities[index].initialized = 1;
     }
-    return;
-
+    
     update_direction(index);
     move(index);
     quad_tree_update(index);

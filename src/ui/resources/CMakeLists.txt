@@ -15,6 +15,8 @@ set(RESOURCE_DEPS ${CMAKE_CURRENT_SOURCE_DIR}/theme.css
     ${CMAKE_CURRENT_SOURCE_DIR}/shader/blur/blur.frag
     ${CMAKE_CURRENT_SOURCE_DIR}/shader/blur/blur.vert
     ${CMAKE_CURRENT_SOURCE_DIR}/shader/blur/blur.geom
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader/quadTreeGrid/quadTreeGrid.frag
+    ${CMAKE_CURRENT_SOURCE_DIR}/shader/quadTreeGrid/quadTreeGrid.vert
 
     ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/closed-captioning-symbolic.svg
     ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/display-with-window-symbolic.svg
@@ -22,4 +24,5 @@ set(RESOURCE_DEPS ${CMAKE_CURRENT_SOURCE_DIR}/theme.css
     ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/pencil-symbolic.svg
     ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/play-large-symbolic.svg
     ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/test-symbolic.svg
-    ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/blur-symbolic.svg PARENT_SCOPE)
+    ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/blur-symbolic.svg
+    ${CMAKE_CURRENT_SOURCE_DIR}/icons/scalable/action/transparent-background-symbolic.svg PARENT_SCOPE)

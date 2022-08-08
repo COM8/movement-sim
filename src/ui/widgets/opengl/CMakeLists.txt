@@ -9,7 +9,9 @@ add_library(ui_widgets_opengl AbstractGlObject.hpp
                               ScreenSquareGlObject.hpp
                               ScreenSquareGlObject.cpp
                               BlurGlObject.hpp
-                              BlurGlObject.cpp)
+                              BlurGlObject.cpp
+                              QuadTreeGridGlObject.hpp
+                              QuadTreeGridGlObject.cpp)
 
 target_link_libraries(ui_widgets_opengl PRIVATE logger PkgConfig::EPOXY PkgConfig::GTKMM ui_widgets_opengl_utils)
 

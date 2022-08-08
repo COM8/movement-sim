@@ -6,8 +6,10 @@ out vec4 outColor;
 
 uniform sampler2D mapTexture;
 uniform sampler2D entitiesTexture;
+uniform sampler2D quadTreeGridTexture;
 uniform vec2 textureSize;
 uniform vec2 screenSize;
+uniform uint quadTreeGridVisible;
 
 void main()
 {
@@ -32,5 +34,11 @@ void main()
     // Layer textures:
     outColor =  texMapColor * (1 - texEntitiesColor.w);
     outColor += texEntitiesColor * texEntitiesColor.w;
+
+    if(quadTreeGridVisible != 0) {
+        vec4 texQuadTreeGridColor = texture(quadTreeGridTexture, scaledCoords);
+        outColor *= (1 - texQuadTreeGridColor.w);
+        outColor += texQuadTreeGridColor * texQuadTreeGridColor.w;
+    }
     return;
 }

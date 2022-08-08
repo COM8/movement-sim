@@ -5,6 +5,8 @@ add_library(ui_widgets_opengl_fb AbstractGlFrameBuffer.hpp
                                  EntitiesFrameBuffer.hpp
                                  EntitiesFrameBuffer.cpp
                                  MapFrameBuffer.hpp
-                                 MapFrameBuffer.cpp)
+                                 MapFrameBuffer.cpp
+                                 QuadTreeGridFrameBuffer.hpp
+                                 QuadTreeGridFrameBuffer.cpp)
 
 target_link_libraries(ui_widgets_opengl_fb PRIVATE logger PkgConfig::EPOXY PkgConfig::GTKMM ui_widgets_opengl_utils)
