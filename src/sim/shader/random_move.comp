@@ -89,7 +89,9 @@ layout(set = 0, binding = 4, std430) buffer bufQuadTreeEntities { QuadTreeEntity
  **/
 layout(set = 0, binding = 5, std430) buffer bufQuadTreeLevelStatus { uint quadTreeLevelUsedStatus[]; };
 
-uint LEVEL_ENTITY_CAP = 2;
+layout(set = 0, binding = 6, std430) buffer bufDebugData { uint debugData[]; };
+
+uint LEVEL_ENTITY_CAP = 1;
 
 void quad_tree_lock_level_read(uint levelIndex) {
     while(atomicCompSwap(quadTreeLevels[levelIndex].acquireLock, 0, 1) != 0) {}
@@ -290,11 +292,14 @@ bool quad_tree_same_pos_as_fist(uint levelIndex, vec2 ePos) {
 }
 
 void quad_tree_insert(uint index) {
+    // Count the number of inserted items:
+    atomicAdd(debugData[0], 1);
+
     vec2 ePos = entities[index].pos;
     uint curDepth = 1;
 
     uint levelIndex = 0;
-    while(true) {
+    while(debugData[1] == 0) {
         quad_tree_lock_level_read(levelIndex);
         float offsetXNext = quadTreeLevels[levelIndex].offsetX + (quadTreeLevels[levelIndex].width / 2);
         float offsetYNext = quadTreeLevels[levelIndex].offsetY + (quadTreeLevels[levelIndex].height / 2);

@@ -28,9 +28,11 @@ enum class SimulatorState {
     JOINING
 };
 
-constexpr size_t MAX_ENTITIES = 10;
+constexpr size_t MAX_ENTITIES = 100000;
 constexpr float MAX_RENDER_RESOLUTION_X = 8192;  // Larger values result in errors when creating frame buffers
 constexpr float MAX_RENDER_RESOLUTION_Y = 8192;
+
+constexpr size_t QUAD_TREE_MAX_DEPTH = 8;
 
 class Simulator {
  private:
@@ -55,6 +57,7 @@ class Simulator {
     std::shared_ptr<kp::Tensor> tensorEntities{nullptr};
     std::shared_ptr<kp::Tensor> tensorConnections{nullptr};
     std::shared_ptr<kp::Tensor> tensorRoads{nullptr};
+    std::shared_ptr<kp::Tensor> tensorDebugData{nullptr};
 
     std::shared_ptr<Map> map{nullptr};
 

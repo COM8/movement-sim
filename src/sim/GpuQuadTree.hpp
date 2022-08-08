@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -61,4 +62,6 @@ struct Entity {
 } __attribute__((packed)) __attribute__((aligned(4)));
 
 void init_level_zero(Level& level, float worldSizeX, float worldSizeY);
+
+size_t calc_level_count(size_t maxDepth);
 }  // namespace sim::gpu_quad_tree
