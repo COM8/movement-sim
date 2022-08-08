@@ -29,6 +29,7 @@ class SimulationSettingsBarWidget : public Gtk::Box {
     Gtk::Button zoomFitBtn;
 
     Gtk::ToggleButton blurTBtn;
+    Gtk::ToggleButton quadTreeGridTBtn;
 
     std::shared_ptr<sim::Simulator> simulator{nullptr};
 
@@ -47,5 +48,6 @@ class SimulationSettingsBarWidget : public Gtk::Box {
     void on_zoom_reset_clicked();
     void on_zoom_fit_clicked();
     void on_blur_toggled();
+    void on_quad_tree_grid_toggled();
 };
 }  // namespace ui::widgets

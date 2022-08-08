@@ -9,8 +9,8 @@ void ScreenSquareGlObject::set_glArea(Gtk::GLArea* glArea) {
     this->glArea = glArea;
 }
 
-void ScreenSquareGlObject::bind_texture(GLuint mapFrameBufferTexture, GLuint entitiesFrameBufferTexture) {
-    frameBufferTextures = {mapFrameBufferTexture, entitiesFrameBufferTexture};
+void ScreenSquareGlObject::bind_texture(GLuint mapFrameBufferTexture, GLuint entitiesFrameBufferTexture, GLuint quadTreeGridFrameBufferTexture) {
+    frameBufferTextures = {mapFrameBufferTexture, entitiesFrameBufferTexture, quadTreeGridFrameBufferTexture};
 }
 
 void ScreenSquareGlObject::init_internal() {
@@ -54,6 +54,7 @@ void ScreenSquareGlObject::init_internal() {
     glUseProgram(shaderProg);
     glUniform1i(glGetUniformLocation(shaderProg, "mapTexture"), 0);
     glUniform1i(glGetUniformLocation(shaderProg, "entitiesTexture"), 1);
+    glUniform1i(glGetUniformLocation(shaderProg, "quadTreeGridTexture"), 2);
 
     textureSizeConst = glGetUniformLocation(shaderProg, "textureSize");
     glUniform2f(textureSizeConst, sim::MAX_RENDER_RESOLUTION_X, sim::MAX_RENDER_RESOLUTION_Y);
@@ -61,6 +62,9 @@ void ScreenSquareGlObject::init_internal() {
     screenSizeConst = glGetUniformLocation(shaderProg, "screenSize");
     assert(glArea);
     glUniform2f(screenSizeConst, static_cast<float>(glArea->get_width()), static_cast<float>(glArea->get_height()));
+
+    quadTreeGridVisibleConst = glGetUniformLocation(shaderProg, "quadTreeGridVisible");
+    glUniform1ui(quadTreeGridVisibleConst, 0);
     GLERR;
 }
 
@@ -76,5 +80,10 @@ void ScreenSquareGlObject::cleanup_internal() {
     glDeleteShader(fragShader);
     glDeleteShader(geomShader);
     glDeleteShader(fragShader);
+}
+
+void ScreenSquareGlObject::set_quad_tree_grid_visibility(bool quadTreeGridVisible) const {
+    glUseProgram(shaderProg);
+    glUniform1ui(quadTreeGridVisibleConst, quadTreeGridVisible ? 1 : 0);
 }
 }  // namespace ui::widgets::opengl

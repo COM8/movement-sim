@@ -28,7 +28,7 @@ enum class SimulatorState {
     JOINING
 };
 
-constexpr size_t MAX_ENTITIES = 1000000;
+constexpr size_t MAX_ENTITIES = 10;
 constexpr float MAX_RENDER_RESOLUTION_X = 8192;  // Larger values result in errors when creating frame buffers
 constexpr float MAX_RENDER_RESOLUTION_Y = 8192;
 
@@ -51,7 +51,7 @@ class Simulator {
     std::shared_ptr<kp::Algorithm> algo{nullptr};
     std::vector<std::shared_ptr<kp::Tensor>> params{};
 
-    std::shared_ptr<std::vector<Entity>> entities;
+    std::shared_ptr<std::vector<Entity>> entities{std::make_shared<std::vector<Entity>>()};
     std::shared_ptr<kp::Tensor> tensorEntities{nullptr};
     std::shared_ptr<kp::Tensor> tensorConnections{nullptr};
     std::shared_ptr<kp::Tensor> tensorRoads{nullptr};
@@ -60,7 +60,7 @@ class Simulator {
 
     // -----------------QuadTree-----------------
     std::vector<gpu_quad_tree::Entity> quadTreeEntities;
-    std::vector<gpu_quad_tree::Level> quadTreeLevels;
+    std::shared_ptr<std::vector<gpu_quad_tree::Level>> quadTreeLevels{std::make_shared<std::vector<gpu_quad_tree::Level>>()};
     std::vector<uint32_t> quadTreeLevelUsedStatus;
 
     std::shared_ptr<kp::Tensor> tensorQuadTreeEntities{nullptr};
@@ -94,13 +94,14 @@ class Simulator {
     [[nodiscard]] const utils::TickRate& get_tps() const;
     [[nodiscard]] const utils::TickDurationHistory& get_tps_history() const;
     std::shared_ptr<std::vector<Entity>> get_entities();
+    std::shared_ptr<std::vector<gpu_quad_tree::Level>> get_quad_tree_levels();
     [[nodiscard]] const std::shared_ptr<Map> get_map() const;
 
     [[nodiscard]] bool is_initialized() const;
 
  private:
     void sim_worker();
-    void sim_tick(std::shared_ptr<kp::Sequence>& sendSeq, std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveSeq);
+    void sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveEntitiesSeq, std::shared_ptr<kp::Sequence>& retrieveQuadTreeLevelsSeq, std::shared_ptr<kp::Sequence>& retrieveMiscSeq);
     void add_entities();
     void check_device_queues();
 

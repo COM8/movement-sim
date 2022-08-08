@@ -23,7 +23,9 @@ void AbstractGlObject::init() {
 
 void AbstractGlObject::render() {
     glUseProgram(shaderProg);
+    GLERR;
     glBindVertexArray(vao);
+    GLERR;
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     GLERR;
 

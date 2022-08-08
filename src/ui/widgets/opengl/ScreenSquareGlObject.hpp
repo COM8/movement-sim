@@ -15,13 +15,15 @@ class ScreenSquareGlObject : public AbstractGlObject {
 
     GLint screenSizeConst{0};
     GLint textureSizeConst{0};
+    GLint quadTreeGridVisibleConst{0};
 
     /**
      * All textures that should be passed to the shader.
      * frameBufferTextures[0] is the map texture.
      * frameBufferTextures[1] is the entities texture.
+     * frameBufferTextures[2] is the quad tree grid texture.
      **/
-    std::array<GLuint, 2> frameBufferTextures{};
+    std::array<GLuint, 3> frameBufferTextures{};
 
     Gtk::GLArea* glArea{nullptr};
 
@@ -36,7 +38,8 @@ class ScreenSquareGlObject : public AbstractGlObject {
     ScreenSquareGlObject& operator=(ScreenSquareGlObject&& old) = delete;
 
     void set_glArea(Gtk::GLArea* glArea);
-    void bind_texture(GLuint mapFrameBufferTexture, GLuint entitiesFrameBufferTexture);
+    void bind_texture(GLuint mapFrameBufferTexture, GLuint entitiesFrameBufferTexture, GLuint quadTreeGridFrameBufferTexture);
+    void set_quad_tree_grid_visibility(bool quadTreeGridVisible) const;
 
  protected:
     void init_internal() override;

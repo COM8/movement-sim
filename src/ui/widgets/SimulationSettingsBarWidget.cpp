@@ -80,6 +80,11 @@ void SimulationSettingsBarWidget::prep_widget() {
     blurTBtn.set_icon_name("blur-symbolic");
     blurTBtn.set_tooltip_text("Blur entities");
     miscBox.append(blurTBtn);
+
+    quadTreeGridTBtn.property_active().signal_changed().connect(sigc::mem_fun(*this, &SimulationSettingsBarWidget::on_quad_tree_grid_toggled));
+    quadTreeGridTBtn.set_icon_name("transparent-background-symbolic");
+    quadTreeGridTBtn.set_tooltip_text("Toggle Quad Tree Grid");
+    miscBox.append(quadTreeGridTBtn);
 }
 
 //-----------------------------Events:-----------------------------
@@ -142,5 +147,10 @@ void SimulationSettingsBarWidget::on_zoom_fit_clicked() {
 void SimulationSettingsBarWidget::on_blur_toggled() {
     assert(simWidget);
     simWidget->set_blur(blurTBtn.get_active());
+}
+
+void SimulationSettingsBarWidget::on_quad_tree_grid_toggled() {
+    assert(simWidget);
+    simWidget->set_quad_tree_grid_visibility(quadTreeGridTBtn.get_active());
 }
 }  // namespace ui::widgets
