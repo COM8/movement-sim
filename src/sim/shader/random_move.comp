@@ -72,6 +72,7 @@ struct QuadTreeLevelDescriptor {
 
 struct QuadTreeEntityDescriptor {
     uint locked;
+    uint levelIndex;
 
     uint typeNext;
     uint next;
@@ -129,24 +130,23 @@ void quad_tree_unlock_level_write(uint levelIndex) {
     memoryBarrierBuffer();
 }
 
-void quad_tree_init_entity(uint index, uint typePrev, uint prev) {
-    quadTreeEntities[index].typeNext = TYPE_INVALID;
-    quadTreeEntities[index].next = 0;    
-    quadTreeEntities[index].typePrev = typePrev;
-    quadTreeEntities[index].prev = prev;
+void quad_tree_init_entity(uint index, uint typeNext, uint next, uint levelIndex) {
+    quadTreeEntities[index].typeNext = typeNext;
+    quadTreeEntities[index].next = next;    
+    quadTreeEntities[index].typePrev = TYPE_INVALID;
+    quadTreeEntities[index].prev = 0;
+    quadTreeEntities[index].levelIndex = levelIndex;
 }
 
 void quad_tree_append_entity(uint levelIndex, uint index) {    
     if(quadTreeLevels[levelIndex].entityCount <= 0) {
         quadTreeLevels[levelIndex].first = index;
-        quad_tree_init_entity(index, TYPE_LEVEL, levelIndex);
+        quad_tree_init_entity(index, TYPE_INVALID, 0, levelIndex);
     }
     else {
         // Add in front:
         uint oldFirstIndex = quadTreeLevels[levelIndex].first;
-        quad_tree_init_entity(index, TYPE_LEVEL, levelIndex);
-        quadTreeEntities[index].typeNext = TYPE_ENTITY;
-        quadTreeEntities[index].next = oldFirstIndex;
+        quad_tree_init_entity(index, TYPE_ENTITY, oldFirstIndex, levelIndex);
 
         quadTreeEntities[oldFirstIndex].typePrev = TYPE_ENTITY;
         quadTreeEntities[oldFirstIndex].prev = index;

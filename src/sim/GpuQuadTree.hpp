@@ -43,6 +43,7 @@ struct Level {
 // NOLINTNEXTLINE (altera-struct-pack-align) Ignore alignment since we need a compact layout.
 struct Entity {
     uint32_t locked{0};
+    uint32_t levelIndex{0};
 
     /**
      * NextType::INVALID - This is the last entity in the line.
@@ -53,8 +54,8 @@ struct Entity {
     uint32_t next{0};
 
     /**
-     * NextType::INVALID - Never.
-     * NextType::LEVEL - Points to the level, the entity is contained in.
+     * NextType::INVALID - This is the first entity in the line.
+     * NextType::LEVEL - Never.
      * NextType::ENTITY - Points to the previous entity in this node.
      **/
     NextType typePrev{NextType::INVALID};
