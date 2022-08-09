@@ -47,8 +47,8 @@ void Simulator::init() {
     tensorConnections = mgr.tensor(map->connections.data(), map->connections.size(), sizeof(unsigned int), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
     // Quad Tree:
-    static_assert(sizeof(gpu_quad_tree::Entity) == sizeof(uint32_t) * 6, "Quad Tree entity size does not match. Expected to be constructed out of 6 uint32_t.");
-    quadTreeEntities.resize(MAX_ENTITIES + 1);  // +1 since entity index 0 is invalid
+    static_assert(sizeof(gpu_quad_tree::Entity) == sizeof(uint32_t) * 5, "Quad Tree entity size does not match. Expected to be constructed out of 6 uint32_t.");
+    quadTreeEntities.resize(MAX_ENTITIES);
     tensorQuadTreeEntities = mgr.tensor(quadTreeEntities.data(), quadTreeEntities.size(), sizeof(gpu_quad_tree::Entity), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
     assert(gpu_quad_tree::calc_level_count(1) == 1);
@@ -56,7 +56,6 @@ void Simulator::init() {
     assert(gpu_quad_tree::calc_level_count(3) == 21);
     assert(gpu_quad_tree::calc_level_count(4) == 85);
 
-    static_assert(sizeof(gpu_quad_tree::Level) == sizeof(uint32_t) * 11 + sizeof(float) * 4, "Quad Tree level size does not match. Expected to be constructed out of 13 uint32_t.");
     quadTreeLevels->resize(gpu_quad_tree::calc_level_count(QUAD_TREE_MAX_DEPTH));
     gpu_quad_tree::init_level_zero((*quadTreeLevels)[0], map->width, map->height);
     tensorQuadTreeLevels = mgr.tensor(quadTreeLevels->data(), quadTreeLevels->size(), sizeof(gpu_quad_tree::Level), kp::Tensor::TensorDataTypes::eUnsignedInt);
