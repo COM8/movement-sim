@@ -11,7 +11,6 @@ enum class NextType : uint32_t {
     ENTITY = 2
 };
 
-// NOLINTNEXTLINE (altera-struct-pack-align) Ignore alignment since we need a compact layout.
 struct Level {
     int32_t acquireLock{0};
     int32_t writeLock{0};
@@ -37,11 +36,12 @@ struct Level {
     uint32_t nextTR{0};
     uint32_t nextBL{0};
     uint32_t nextBR{0};
-} __attribute__((packed)) __attribute__((aligned(4)));
+
+    uint32_t padding{0};
+} __attribute__((packed)) __attribute__((aligned(64)));
 
 // NOLINTNEXTLINE (altera-struct-pack-align) Ignore alignment since we need a compact layout.
 struct Entity {
-    uint32_t index{0};
     uint32_t locked{0};
 
     /**
