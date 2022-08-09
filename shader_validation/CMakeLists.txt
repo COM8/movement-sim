@@ -24,7 +24,7 @@ endmacro()
 
 message(STATUS "Shader validation options")
 message(STATUS "=======================================================")
-shader_validation_option(SHADER_VALIDATION_STATIC_ANALYZE "Set to ON to enable the GCC 10 static analysis. If enabled, SHADER_VALIDATION_ENABLE_LINTING has to be disabled." OFF)
+shader_validation_option(SHADER_VALIDATION_STATIC_ANALYZE "Set to ON to enable the GCC 10 static analysis. If enabled, SHADER_VALIDATION_ENABLE_LINTING has to be disabled." ON)
 shader_validation_option(SHADER_VALIDATION_ENABLE_LINTING "Set to ON to enable clang linting. If enabled, SHADER_VALIDATION_STATIC_ANALYZE has to be disabled." OFF)
 message(STATUS "=======================================================")
 

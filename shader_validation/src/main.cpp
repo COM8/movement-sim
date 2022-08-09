@@ -1,6 +1,11 @@
 #include <array>
+#include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <iostream>
+#include <limits>
+#include <random>
 
 template <class T>
 struct vec4T {
@@ -92,8 +97,8 @@ struct PushConstantsDescriptor {
     uint maxDepth{0};
 } __attribute__((aligned(16)));
 
-std::array<EntityDescriptor, 10000> entities{};
-PushConstantsDescriptor pushConsts{29007.4609, 16463.7656, 21845, 8};
+static std::array<EntityDescriptor, 1000000> entities{};
+static PushConstantsDescriptor pushConsts{29007.4609, 16463.7656, 21845, 8};
 
 // ------------------------------------------------------------------------------------
 // Quad Tree
@@ -137,22 +142,24 @@ struct QuadTreeEntityDescriptor {
 } __attribute__((aligned(32)));
 
 // TODO add memory qualifiers: https://www.khronos.org/opengl/wiki/Shader_Storage_Buffer_Object
-std::array<QuadTreeLevelDescriptor, 21845> quadTreeLevels{};
-std::array<QuadTreeEntityDescriptor, 10000> quadTreeEntities{};
+static std::array<QuadTreeLevelDescriptor, 21845> quadTreeLevels{};
+static std::array<QuadTreeEntityDescriptor, 1000000> quadTreeEntities{};
 /**
  * [0]: Lock
  * [1]: Next free hint
  * [2... (levelCount + 2)]: Level locks
  **/
-std::array<uint, 21847> quadTreeLevelUsedStatus{};
-std::array<uint, 10> debugData{};
+static std::array<uint, 21847> quadTreeLevelUsedStatus{};
+static std::array<uint, 10> debugData{};
 
 uint LEVEL_ENTITY_CAP = 1;
 
 void quad_tree_lock_level_read(uint levelIndex) {
+    assert(quadTreeLevels[levelIndex].acquireLock >= 0);
     while (atomicCompSwap(quadTreeLevels[levelIndex].acquireLock, 0, 1) != 0) {}
 
     // Prevent from reading, when we are currently writing:
+    assert(quadTreeLevels[levelIndex].writeLock >= 0);
     while (quadTreeLevels[levelIndex].writeLock != 0) {}
     atomicAdd(quadTreeLevels[levelIndex].readerLock, 1);
 
@@ -161,6 +168,7 @@ void quad_tree_lock_level_read(uint levelIndex) {
 }
 
 void quad_tree_unlock_level_read(uint levelIndex) {
+    assert(quadTreeLevels[levelIndex].readerLock > 0);
     atomicAdd(quadTreeLevels[levelIndex].readerLock, -1);
     memoryBarrierBuffer();
 }
@@ -169,10 +177,13 @@ void quad_tree_unlock_level_read(uint levelIndex) {
  * Locks read and write for the given levelIndex.
  **/
 void quad_tree_lock_level_read_write(uint levelIndex) {
+    assert(quadTreeLevels[levelIndex].acquireLock >= 0);
     while (atomicCompSwap(quadTreeLevels[levelIndex].acquireLock, 0, 1) != 0) {}
 
     // Wait until all others stopped reading:
+    assert(quadTreeLevels[levelIndex].readerLock >= 0);
     while (atomicCompSwap(quadTreeLevels[levelIndex].readerLock, 0, 1) != 0) {}
+    assert(quadTreeLevels[levelIndex].writeLock >= 0);
     while (atomicCompSwap(quadTreeLevels[levelIndex].writeLock, 0, 1) != 0) {}
 
     atomicExchange(quadTreeLevels[levelIndex].acquireLock, 0);
@@ -180,6 +191,7 @@ void quad_tree_lock_level_read_write(uint levelIndex) {
 }
 
 void quad_tree_unlock_level_write(uint levelIndex) {
+    assert(quadTreeLevels[levelIndex].writeLock == 1);
     atomicExchange(quadTreeLevels[levelIndex].writeLock, 0);
     memoryBarrierBuffer();
 }
@@ -282,6 +294,7 @@ void quad_tree_init_level(uint levelIndex, uint prevLevelIndex, float offsetX, f
 
     quadTreeLevels[levelIndex].prevLevelIndex = prevLevelIndex;
     quadTreeLevels[levelIndex].contentType = TYPE_INVALID;
+    quadTreeLevels[levelIndex].entityCount = 0;
 }
 
 void quad_tree_move_entities(uint levelIndex) {
@@ -427,8 +440,7 @@ bool quad_tree_is_entity_on_level(uint index, uint levelIndex) {
 /**
  * Moves down the quad tree and locks all levels as read, except the last level, which gets locked as write so we can edit it.
  **/
-void quad_tree_lock_for_entity_edit(uint index) {
-    vec2 ePos = entities[index].pos;
+uint quad_tree_lock_for_entity_edit(vec2 oldPos) {
     uint levelIndex = 0;
     while (true) {
         quad_tree_lock_level_read(levelIndex);
@@ -438,9 +450,9 @@ void quad_tree_lock_for_entity_edit(uint index) {
         // Go one level deeper:
         if (quadTreeLevels[levelIndex].contentType == TYPE_LEVEL) {
             // Left:
-            if (ePos.x < offsetXNext) {
+            if (oldPos.x < offsetXNext) {
                 // Top:
-                if (ePos.y < offsetYNext) {
+                if (oldPos.y < offsetYNext) {
                     levelIndex = quadTreeLevels[levelIndex].nextTL;
                 } else {
                     levelIndex = quadTreeLevels[levelIndex].nextBL;
@@ -449,12 +461,13 @@ void quad_tree_lock_for_entity_edit(uint index) {
             // Right:
             else {
                 // Top:
-                if (ePos.y < offsetYNext) {
+                if (oldPos.y < offsetYNext) {
                     levelIndex = quadTreeLevels[levelIndex].nextTR;
                 } else {
                     levelIndex = quadTreeLevels[levelIndex].nextBR;
                 }
             }
+            assert(levelIndex != 0);
         } else {
             // Prevent a deadlock:
             quad_tree_unlock_level_read(levelIndex);
@@ -465,7 +478,8 @@ void quad_tree_lock_for_entity_edit(uint index) {
                 quad_tree_unlock_level_write(levelIndex);
                 quad_tree_unlock_level_read(levelIndex);
             } else {
-                return;
+                assert(levelIndex != 0);
+                return levelIndex;
             }
         }
     }
@@ -502,7 +516,7 @@ bool quad_tree_remove_entity(uint index) {
 }
 
 bool quad_tree_is_level_empty(uint levelIndex) {
-    return quadTreeLevels[levelIndex].entityCount <= 0;
+    return quadTreeLevels[levelIndex].entityCount <= 0 && quadTreeLevels[levelIndex].contentType != TYPE_LEVEL;
 }
 
 bool quad_tree_try_merging_sublevel(uint levelIndex) {
@@ -512,9 +526,12 @@ bool quad_tree_try_merging_sublevel(uint levelIndex) {
 
     if (quad_tree_is_level_empty(quadTreeLevels[levelIndex].nextTL) && quad_tree_is_level_empty(quadTreeLevels[levelIndex].nextTR) && quad_tree_is_level_empty(quadTreeLevels[levelIndex].nextBL) && quad_tree_is_level_empty(quadTreeLevels[levelIndex].nextBR)) {
         quad_tree_free_level_indices(uvec4(quadTreeLevels[levelIndex].nextTL, quadTreeLevels[levelIndex].nextTR, quadTreeLevels[levelIndex].nextBL, quadTreeLevels[levelIndex].nextBR));
+        assert(quadTreeLevels[levelIndex].entityCount <= 0);
         quadTreeLevels[levelIndex].contentType = TYPE_INVALID;
+        std::cout << "Merged levels of " << levelIndex << '\n';
+        return true;
     }
-    return true;
+    return false;
 }
 
 void quad_tree_update(uint index) {
@@ -535,20 +552,27 @@ void quad_tree_update(uint index) {
         return;
     }
 
-    quad_tree_lock_for_entity_edit(index);
     uint levelIndex = quadTreeEntities[index].levelIndex;
+    quad_tree_unlock_level_read(levelIndex);
+    uint newLevelIndex = quad_tree_lock_for_entity_edit(vec2(quadTreeLevels[levelIndex].offsetX, quadTreeLevels[levelIndex].offsetY));
+    assert(newLevelIndex == levelIndex);
     if (quad_tree_remove_entity(index)) {
         // Try merging levels:
-        levelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
-        while (quad_tree_try_merging_sublevel(levelIndex)) {
+        while (levelIndex != quadTreeLevels[levelIndex].prevLevelIndex) {
             quad_tree_unlock_level_write(levelIndex);
+            quad_tree_unlock_level_read(levelIndex);
             levelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
 
             // Prevent deadlocks:
             quad_tree_unlock_level_read(levelIndex);
             quad_tree_lock_level_read_write(levelIndex);
+
+            if (!quad_tree_try_merging_sublevel(levelIndex)) {
+                break;
+            }
         }
     }
+    quad_tree_unlock_level_write(levelIndex);
 
     // Move up until we reach a level where our entity is on:
     while (!quad_tree_is_entity_on_level(index, levelIndex)) {
@@ -560,10 +584,51 @@ void quad_tree_update(uint index) {
     // Insert the entity again:
     quad_tree_unlock_level_read(levelIndex);
     quad_tree_insert(index, levelIndex);
+    std::cout << "Updated " << index << '\n';
 }
 
 // ------------------------------------------------------------------------------------
 
+void move(uint index) {
+    static std::random_device device;
+    static std::mt19937 gen(device());
+    static std::uniform_real_distribution<float> distr_x(0, pushConsts.worldSizeX);
+    static std::uniform_real_distribution<float> distr_y(0, pushConsts.worldSizeY);
+
+    entities[index].pos = vec2(distr_x(gen), distr_y(gen));
+}
+
+void shader_main(uint index) {
+    if (entities[index].initialized == 0) {
+        quad_tree_insert(index, 0);
+        entities[index].initialized = 1;
+        return;
+    }
+
+    move(index);
+    quad_tree_update(index);
+}
+
+void init() {
+    // Entities:
+    for (size_t index = 0; index < entities.size(); index++) {
+        move(index);
+    }
+
+    // Quad Tree:
+    quadTreeLevels[0].width = pushConsts.worldSizeX;
+    quadTreeLevels[0].height = pushConsts.worldSizeY;
+    quadTreeLevelUsedStatus[1] = 2;  // Pointer to the first free level index;
+}
+
 int main() {
+    init();
+    size_t tick = 0;
+    while (true) {
+        for (size_t index = 0; index < entities.size(); index++) {
+            shader_main(index);
+        }
+        std::cout << "Shader ticked: " << tick << '\n';
+    }
     return EXIT_SUCCESS;
 }
