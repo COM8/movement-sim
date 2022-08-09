@@ -297,7 +297,7 @@ void quad_tree_insert(uint index) {
     uint curDepth = 1;
 
     uint levelIndex = 0;
-    while(debugData[1] == 0) {
+    while(true) {
         quad_tree_lock_level_read(levelIndex);
         float offsetXNext = quadTreeLevels[levelIndex].offsetX + (quadTreeLevels[levelIndex].width / 2);
         float offsetYNext = quadTreeLevels[levelIndex].offsetY + (quadTreeLevels[levelIndex].height / 2);
@@ -334,10 +334,7 @@ void quad_tree_insert(uint index) {
             // Check if something has changed in the meantime with the level. Retry...
             if(quadTreeLevels[levelIndex].contentType == TYPE_LEVEL) {
                 quad_tree_unlock_level_write(levelIndex);
-                uint oldLevelIndex = levelIndex;
-                levelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
-                quad_tree_unlock_level_read(oldLevelIndex);
-                curDepth -= 1;
+                quad_tree_unlock_level_read(levelIndex);
             }
             else {
                 // Insert the entity in case there is space left, we can't go deeper or the entity has the same pos as the last:
