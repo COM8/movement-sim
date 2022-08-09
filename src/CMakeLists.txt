@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-# Fix install RPATH for linux:
+# Fix install RPATH for Linux:
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 

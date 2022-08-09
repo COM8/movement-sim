@@ -4,7 +4,7 @@ set(PROJECT_DESCRIPTION "GPU accelerated human movement simulator.")
 project("mSim" 
             VERSION 0.1.0
             DESCRIPTION "${PROJECT_DESCRIPTION}"
-            HOMEPAGE_URL "https://github.com/COM8/movement-sim.git")
+            HOMEPAGE_URL "https://github.com/COM8/movement-sim")
 set(VERSION_NAME "dev")
 
 set(CMAKE_CXX_STANDARD 20)
