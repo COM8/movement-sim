@@ -42,7 +42,6 @@ struct Level {
 
 // NOLINTNEXTLINE (altera-struct-pack-align) Ignore alignment since we need a compact layout.
 struct Entity {
-    uint32_t locked{0};
     uint32_t levelIndex{0};
 
     /**
