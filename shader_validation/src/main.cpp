@@ -98,8 +98,8 @@ struct PushConstantsDescriptor {
     uint maxDepth{0};
 } __attribute__((aligned(16)));
 
-const size_t MAX_DEPTH = 2;
-const size_t NUM_LEVELS = 5;
+const size_t MAX_DEPTH = 3;
+const size_t NUM_LEVELS = 21;
 const size_t NUM_ENTITIES = 20;
 
 static std::array<EntityDescriptor, NUM_ENTITIES> entities{};
@@ -312,12 +312,12 @@ uvec4 quad_tree_get_free_level_indices() {
 void quad_tree_free_level_indices(uvec4 indices) {
     while (atomicCompSwap(quadTreeLevelUsedStatus[0], 0, 1) != 0) {}
 
-    quadTreeLevelUsedStatus[indices.x] = 0;
-    quadTreeLevelUsedStatus[indices.y] = 0;
-    quadTreeLevelUsedStatus[indices.z] = 0;
-    quadTreeLevelUsedStatus[indices.w] = 0;
+    quadTreeLevelUsedStatus[indices.x + 2] = 0;
+    quadTreeLevelUsedStatus[indices.y + 2] = 0;
+    quadTreeLevelUsedStatus[indices.z + 2] = 0;
+    quadTreeLevelUsedStatus[indices.w + 2] = 0;
 
-    quadTreeLevelUsedStatus[1] = indices.x;
+    quadTreeLevelUsedStatus[1] = indices.x + 2;
 
     memoryBarrierBuffer();
     atomicExchange(quadTreeLevelUsedStatus[0], 0);
@@ -408,12 +408,12 @@ bool quad_tree_same_pos_as_fist(uint levelIndex, vec2 ePos) {
     return false;
 }
 
-void quad_tree_insert(uint index, uint startLevelIndex) {
+void quad_tree_insert(uint index, uint startLevelIndex, uint startLevelDepth) {
     // Count the number of inserted items:
     atomicAdd(debugData[0], 1);
 
     vec2 ePos = entities[index].pos;
-    uint curDepth = 1;
+    uint curDepth = startLevelDepth;
 
     uint levelIndex = startLevelIndex;
     while (true) {
@@ -580,6 +580,15 @@ bool quad_tree_try_merging_sublevel(uint levelIndex) {
     return false;
 }
 
+uint quad_tree_get_cur_depth(uint levelIndex) {
+    uint depth = 1;
+    while (quadTreeLevels[levelIndex].prevLevelIndex != levelIndex) {
+        levelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
+        depth++;
+    }
+    return depth;
+}
+
 void quad_tree_update(uint index) {
     while (true) {
         uint oldLevelIndex = quadTreeEntities[index].levelIndex;
@@ -629,7 +638,7 @@ void quad_tree_update(uint index) {
 
     // Insert the entity again:
     quad_tree_unlock_level_read(levelIndex);
-    quad_tree_insert(index, levelIndex);
+    quad_tree_insert(index, levelIndex, quad_tree_get_cur_depth(levelIndex));
     std::cout << "Updated " << index << '\n';
 }
 
@@ -646,7 +655,7 @@ void move(uint index) {
 
 void shader_main(uint index) {
     if (entities[index].initialized == 0) {
-        quad_tree_insert(index, 0);
+        quad_tree_insert(index, 0, 1);
         entities[index].initialized = 1;
         std::cout << "Inserted: " << index << '\n';
         return;
