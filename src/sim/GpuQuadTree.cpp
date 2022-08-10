@@ -6,6 +6,7 @@ namespace sim::gpu_quad_tree {
 void init_level_zero(Level& level, float worldSizeX, float worldSizeY) {
     level.width = worldSizeX;
     level.height = worldSizeY;
+    level.contentType = NextType::ENTITY;
 }
 
 size_t calc_level_count(size_t maxDepth) {

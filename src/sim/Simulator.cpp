@@ -55,6 +55,7 @@ void Simulator::init() {
     assert(gpu_quad_tree::calc_level_count(2) == 5);
     assert(gpu_quad_tree::calc_level_count(3) == 21);
     assert(gpu_quad_tree::calc_level_count(4) == 85);
+    assert(gpu_quad_tree::calc_level_count(8) == 21845);
 
     quadTreeLevels->resize(gpu_quad_tree::calc_level_count(QUAD_TREE_MAX_DEPTH));
     gpu_quad_tree::init_level_zero((*quadTreeLevels)[0], map->width, map->height);

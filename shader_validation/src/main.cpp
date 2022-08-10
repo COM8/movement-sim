@@ -6,6 +6,7 @@
 #include <iostream>
 #include <limits>
 #include <random>
+#include <string>
 
 template <class T>
 struct vec4T {
@@ -97,8 +98,12 @@ struct PushConstantsDescriptor {
     uint maxDepth{0};
 } __attribute__((aligned(16)));
 
-static std::array<EntityDescriptor, 1000000> entities{};
-static PushConstantsDescriptor pushConsts{29007.4609, 16463.7656, 21845, 8};
+const size_t MAX_DEPTH = 2;
+const size_t NUM_LEVELS = 5;
+const size_t NUM_ENTITIES = 20;
+
+static std::array<EntityDescriptor, NUM_ENTITIES> entities{};
+static PushConstantsDescriptor pushConsts{29007.4609, 16463.7656, NUM_LEVELS, MAX_DEPTH};
 
 // ------------------------------------------------------------------------------------
 // Quad Tree
@@ -142,17 +147,53 @@ struct QuadTreeEntityDescriptor {
 } __attribute__((aligned(32)));
 
 // TODO add memory qualifiers: https://www.khronos.org/opengl/wiki/Shader_Storage_Buffer_Object
-static std::array<QuadTreeLevelDescriptor, 21845> quadTreeLevels{};
-static std::array<QuadTreeEntityDescriptor, 1000000> quadTreeEntities{};
+static std::array<QuadTreeLevelDescriptor, NUM_LEVELS> quadTreeLevels{};
+static std::array<QuadTreeEntityDescriptor, NUM_ENTITIES> quadTreeEntities{};
 /**
  * [0]: Lock
  * [1]: Next free hint
  * [2... (levelCount + 2)]: Level locks
  **/
-static std::array<uint, 21847> quadTreeLevelUsedStatus{};
+static std::array<uint, NUM_LEVELS + 2> quadTreeLevelUsedStatus{};
 static std::array<uint, 10> debugData{};
 
 uint LEVEL_ENTITY_CAP = 1;
+
+void to_dot_graph_rec(std::string& result, uint levelIndex);
+std::string to_dot_graph();
+
+size_t count_entities_rec(uint levelIndex) {
+    if (quadTreeLevels[levelIndex].contentType == TYPE_LEVEL) {
+        assert(quadTreeLevels[levelIndex].entityCount == 0);
+        return count_entities_rec(quadTreeLevels[levelIndex].nextTL) + count_entities_rec(quadTreeLevels[levelIndex].nextTR) + count_entities_rec(quadTreeLevels[levelIndex].nextBL) + count_entities_rec(quadTreeLevels[levelIndex].nextBR);
+    }
+    assert(quadTreeLevels[levelIndex].contentType == TYPE_ENTITY);
+
+    uint expectedCount = 0;
+    if (quadTreeLevels[levelIndex].entityCount > 0) {
+        uint index = quadTreeLevels[levelIndex].first;
+        while (quadTreeEntities[index].typeNext == TYPE_ENTITY) {
+            expectedCount++;
+            index = quadTreeEntities[index].next;
+        }
+        expectedCount++;  // Also count the last one
+    }
+
+    uint actualCount = quadTreeLevels[levelIndex].entityCount;
+    if (actualCount != expectedCount) {
+        std::cout << to_dot_graph() << '\n';
+    }
+    assert(actualCount == expectedCount);
+    return quadTreeLevels[levelIndex].entityCount;
+}
+
+void validate_entity_count(size_t expected) {
+    size_t count = count_entities_rec(0);
+    if (count != expected) {
+        std::cout << to_dot_graph() << '\n';
+    }
+    assert(count == expected);
+}
 
 void quad_tree_lock_level_read(uint levelIndex) {
     assert(quadTreeLevels[levelIndex].acquireLock >= 0);
@@ -293,7 +334,7 @@ void quad_tree_init_level(uint levelIndex, uint prevLevelIndex, float offsetX, f
     quadTreeLevels[levelIndex].height = height;
 
     quadTreeLevels[levelIndex].prevLevelIndex = prevLevelIndex;
-    quadTreeLevels[levelIndex].contentType = TYPE_INVALID;
+    quadTreeLevels[levelIndex].contentType = TYPE_ENTITY;
     quadTreeLevels[levelIndex].entityCount = 0;
 }
 
@@ -419,12 +460,10 @@ void quad_tree_insert(uint index, uint startLevelIndex) {
                     break;
                 }
                 // Split up
-                else {
-                    memoryBarrierBuffer();
-                    quad_tree_split_up_level(levelIndex);
-                    quad_tree_unlock_level_write(levelIndex);
-                    quad_tree_unlock_level_read(levelIndex);
-                }
+                memoryBarrierBuffer();
+                quad_tree_split_up_level(levelIndex);
+                quad_tree_unlock_level_write(levelIndex);
+                quad_tree_unlock_level_read(levelIndex);
             }
         }
         memoryBarrierBuffer();  // Ensure everything is in sync
@@ -488,35 +527,42 @@ uint quad_tree_lock_for_entity_edit(vec2 oldPos) {
 /**
  * Removes the given entity from its level.
  * Returns true in case it was the last entity on this level.
- * Will not reset typePrev and typeNext of the given entity.
  **/
 bool quad_tree_remove_entity(uint index) {
     uint levelIndex = quadTreeEntities[index].levelIndex;
+    uint count = count_entities_rec(0);
     if (quadTreeLevels[levelIndex].entityCount <= 1) {
         quadTreeLevels[levelIndex].first = 0;
-        quadTreeLevels[levelIndex].contentType = TYPE_INVALID;
         quadTreeLevels[levelIndex].entityCount = 0;
+        validate_entity_count(count - 1);
         return true;
-    } else {
-        if (quadTreeEntities[index].typePrev == TYPE_ENTITY) {
-            uint prevIndex = quadTreeEntities[index].prev;
-            quadTreeEntities[prevIndex].next = quadTreeEntities[index].next;
-            quadTreeEntities[prevIndex].typeNext = quadTreeEntities[index].typeNext;
-        }
-
-        if (quadTreeEntities[index].typeNext == TYPE_ENTITY) {
-            uint nextIndex = quadTreeEntities[index].prev;
-            quadTreeEntities[nextIndex].prev = quadTreeEntities[index].prev;
-            quadTreeEntities[nextIndex].typePrev = quadTreeEntities[index].typePrev;
-        }
-        quadTreeLevels[levelIndex].entityCount -= 1;
     }
 
+    if (quadTreeLevels[levelIndex].first == index) {
+        quadTreeLevels[levelIndex].first = quadTreeEntities[index].next;
+    }
+
+    if (quadTreeEntities[index].typePrev == TYPE_ENTITY) {
+        uint prevIndex = quadTreeEntities[index].prev;
+        quadTreeEntities[prevIndex].next = quadTreeEntities[index].next;
+        quadTreeEntities[prevIndex].typeNext = quadTreeEntities[index].typeNext;
+    }
+
+    if (quadTreeEntities[index].typeNext == TYPE_ENTITY) {
+        uint nextIndex = quadTreeEntities[index].next;
+        quadTreeEntities[nextIndex].prev = quadTreeEntities[index].prev;
+        quadTreeEntities[nextIndex].typePrev = quadTreeEntities[index].typePrev;
+    }
+    quadTreeEntities[index].typePrev = TYPE_INVALID;
+    quadTreeEntities[index].typeNext = TYPE_INVALID;
+    quadTreeLevels[levelIndex].entityCount -= 1;
+
+    validate_entity_count(count - 1);
     return false;
 }
 
 bool quad_tree_is_level_empty(uint levelIndex) {
-    return quadTreeLevels[levelIndex].entityCount <= 0 && quadTreeLevels[levelIndex].contentType != TYPE_LEVEL;
+    return quadTreeLevels[levelIndex].entityCount <= 0 && quadTreeLevels[levelIndex].contentType == TYPE_ENTITY;
 }
 
 bool quad_tree_try_merging_sublevel(uint levelIndex) {
@@ -527,7 +573,7 @@ bool quad_tree_try_merging_sublevel(uint levelIndex) {
     if (quad_tree_is_level_empty(quadTreeLevels[levelIndex].nextTL) && quad_tree_is_level_empty(quadTreeLevels[levelIndex].nextTR) && quad_tree_is_level_empty(quadTreeLevels[levelIndex].nextBL) && quad_tree_is_level_empty(quadTreeLevels[levelIndex].nextBR)) {
         quad_tree_free_level_indices(uvec4(quadTreeLevels[levelIndex].nextTL, quadTreeLevels[levelIndex].nextTR, quadTreeLevels[levelIndex].nextBL, quadTreeLevels[levelIndex].nextBR));
         assert(quadTreeLevels[levelIndex].entityCount <= 0);
-        quadTreeLevels[levelIndex].contentType = TYPE_INVALID;
+        quadTreeLevels[levelIndex].contentType = TYPE_ENTITY;
         std::cout << "Merged levels of " << levelIndex << '\n';
         return true;
     }
@@ -602,6 +648,7 @@ void shader_main(uint index) {
     if (entities[index].initialized == 0) {
         quad_tree_insert(index, 0);
         entities[index].initialized = 1;
+        std::cout << "Inserted: " << index << '\n';
         return;
     }
 
@@ -618,7 +665,53 @@ void init() {
     // Quad Tree:
     quadTreeLevels[0].width = pushConsts.worldSizeX;
     quadTreeLevels[0].height = pushConsts.worldSizeY;
+    quadTreeLevels[0].contentType = TYPE_ENTITY;
     quadTreeLevelUsedStatus[1] = 2;  // Pointer to the first free level index;
+}
+
+void to_dot_graph_rec(std::string& result, uint levelIndex) {
+    if (quadTreeLevels[levelIndex].contentType == TYPE_LEVEL) {
+        result += "n" + std::to_string(levelIndex) + " [shape=box];";
+        to_dot_graph_rec(result, quadTreeLevels[levelIndex].nextTL);
+        to_dot_graph_rec(result, quadTreeLevels[levelIndex].nextTR);
+        to_dot_graph_rec(result, quadTreeLevels[levelIndex].nextBL);
+        to_dot_graph_rec(result, quadTreeLevels[levelIndex].nextBR);
+
+        result += "n" + std::to_string(levelIndex) + " -> " + "n" + std::to_string(quadTreeLevels[levelIndex].nextTL) + ";";
+        result += "n" + std::to_string(levelIndex) + " -> " + "n" + std::to_string(quadTreeLevels[levelIndex].nextTR) + ";";
+        result += "n" + std::to_string(levelIndex) + " -> " + "n" + std::to_string(quadTreeLevels[levelIndex].nextBL) + ";";
+        result += "n" + std::to_string(levelIndex) + " -> " + "n" + std::to_string(quadTreeLevels[levelIndex].nextBR) + ";";
+    } else {
+        result += "n" + std::to_string(levelIndex) + " [shape=box, label=\"n" + std::to_string(levelIndex) + ": " + std::to_string(quadTreeLevels[levelIndex].entityCount) + "\"];";
+        if (quadTreeLevels[levelIndex].entityCount > 0) {
+            uint index = quadTreeLevels[levelIndex].first;
+            std::string prevName = "n" + std::to_string(levelIndex);
+            while (quadTreeEntities[index].typeNext == TYPE_ENTITY) {
+                std::string curName = "n" + std::to_string(levelIndex) + "e" + std::to_string(index);
+                result += curName + ";";
+                result += (prevName + " -> " + curName + ";");
+                if (quadTreeEntities[index].typePrev == TYPE_ENTITY) {
+                    result += curName + " -> " + ("n" + std::to_string(levelIndex) + "e" + std::to_string(quadTreeEntities[index].prev) + ";");
+                }
+                prevName = curName;
+
+                index = quadTreeEntities[index].next;
+            }
+
+            std::string curName = "n" + std::to_string(levelIndex) + "e" + std::to_string(index);
+            result += curName + ";";
+            result += (prevName + " -> " + curName + ";");
+            if (quadTreeEntities[index].typePrev == TYPE_ENTITY) {
+                result += (curName + " -> " + "n" + std::to_string(levelIndex) + "e" + std::to_string(quadTreeEntities[index].prev) + ";");
+            }
+        }
+    }
+}
+
+std::string to_dot_graph() {
+    std::string result = "digraph quad_tree {";
+    to_dot_graph_rec(result, 0);
+    return result + '}';
 }
 
 int main() {
@@ -627,8 +720,15 @@ int main() {
     while (true) {
         for (size_t index = 0; index < entities.size(); index++) {
             shader_main(index);
+            if (tick == 0) {
+                std::cout << to_dot_graph() << '\n';
+                validate_entity_count(index + 1);
+            } else {
+                std::cout << to_dot_graph() << '\n';
+                validate_entity_count(NUM_ENTITIES);
+            }
         }
-        std::cout << "Shader ticked: " << tick << '\n';
+        std::cout << "Shader ticked: " << tick++ << '\n';
     }
     return EXIT_SUCCESS;
 }
