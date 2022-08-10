@@ -10,6 +10,10 @@ void MainWindow::prep_window() {
     set_title("Movement Simulator");
     set_default_size(800, 550);
 
+#if DEBUG
+    add_css_class("devel");
+#endif
+
     // Keyboard events:
     Glib::RefPtr<Gtk::EventControllerKey> controller = Gtk::EventControllerKey::create();
     controller->signal_key_pressed().connect(sigc::mem_fun(*this, &MainWindow::on_key_pressed), false);
