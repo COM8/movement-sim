@@ -28,7 +28,8 @@ void AbstractGlFrameBuffer::init() {
     GLERR;
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA16, sizeX, sizeY);
     GLERR;
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeX, sizeY, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    std::vector<GLubyte> emptyData(sizeX * sizeX * 4, 0);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, sizeX, sizeY, GL_RGBA, GL_UNSIGNED_BYTE, emptyData.data());
     GLERR;
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbufTexture, 0);
     GLERR;
