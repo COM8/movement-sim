@@ -375,7 +375,8 @@ bool quad_tree_is_entity_on_level(uint index, uint levelIndex) {
 /**
  * Moves down the quad tree and locks all levels as read, except the last level, which gets locked as write so we can edit it.
  **/
-uint quad_tree_lock_for_entity_edit(vec2 oldPos) {
+uint quad_tree_lock_for_entity_edit(uint index) {
+    vec2 ePos = entities[index].pos;
     uint levelIndex = 0;
     while (true) {
         quad_tree_lock_level_read(levelIndex);
@@ -385,9 +386,9 @@ uint quad_tree_lock_for_entity_edit(vec2 oldPos) {
         // Go one level deeper:
         if (quadTreeLevels[levelIndex].contentType == TYPE_LEVEL) {
             // Left:
-            if (oldPos.x < offsetXNext) {
+            if (ePos.x < offsetXNext) {
                 // Top:
-                if (oldPos.y < offsetYNext) {
+                if (ePos.y < offsetYNext) {
                     levelIndex = quadTreeLevels[levelIndex].nextTL;
                 } else {
                     levelIndex = quadTreeLevels[levelIndex].nextBL;
@@ -396,7 +397,7 @@ uint quad_tree_lock_for_entity_edit(vec2 oldPos) {
             // Right:
             else {
                 // Top:
-                if (oldPos.y < offsetYNext) {
+                if (ePos.y < offsetYNext) {
                     levelIndex = quadTreeLevels[levelIndex].nextTR;
                 } else {
                     levelIndex = quadTreeLevels[levelIndex].nextBR;
@@ -478,7 +479,7 @@ uint quad_tree_get_cur_depth(uint levelIndex) {
     return depth;
 }
 
-void quad_tree_update(uint index) {
+void quad_tree_update(uint index, vec2 newPos) {
     while (true) {
         uint oldLevelIndex = quadTreeEntities[index].levelIndex;
         quad_tree_lock_level_read(oldLevelIndex);
@@ -492,13 +493,14 @@ void quad_tree_update(uint index) {
 
     // Still on the same level, so we do not need to do anything:
     if (quad_tree_is_entity_on_level(index, quadTreeEntities[index].levelIndex)) {
+        entities[index].pos = newPos;
         quad_tree_unlock_level_read(quadTreeEntities[index].levelIndex);
         return;
     }
 
     uint levelIndex = quadTreeEntities[index].levelIndex;
     quad_tree_unlock_level_read(levelIndex);
-    uint newLevelIndex = quad_tree_lock_for_entity_edit(vec2(quadTreeLevels[levelIndex].offsetX, quadTreeLevels[levelIndex].offsetY));
+    levelIndex = quad_tree_lock_for_entity_edit(index);
     if (quad_tree_remove_entity(index)) {
         // Try merging levels:
         while (levelIndex != quadTreeLevels[levelIndex].prevLevelIndex) {
@@ -516,6 +518,9 @@ void quad_tree_update(uint index) {
         }
     }
     quad_tree_unlock_level_write(levelIndex);
+
+    // Update the removed entity position:
+    entities[index].pos = newPos;
 
     // Move up until we reach a level where our entity is on:
     while (!quad_tree_is_entity_on_level(index, levelIndex)) {
@@ -636,8 +641,8 @@ void new_target(uint index) {
     // entities[index].target = vec2(targetX, targetY);
 }
 
-void update_direction(uint index) {
-    vec2 dist = entities[index].target - entities[index].pos;
+void update_direction(uint index, vec2 pos) {
+    vec2 dist = entities[index].target - pos;
     float len = length(dist);
     if(len == 0) {
         entities[index].direction = vec2(0);
@@ -647,17 +652,17 @@ void update_direction(uint index) {
     entities[index].direction = normVec * SPEED;
 }
 
-void move(uint index) {
+vec2 move(uint index) {
     float dist = distance(entities[index].pos, entities[index].target);
 
     if(dist > SPEED) {
-        entities[index].pos += entities[index].direction;
+        return entities[index].pos + entities[index].direction;
     }
-    else {
-        entities[index].pos = entities[index].target;
-        new_target(index);
-        update_direction(index);
-    }
+
+    vec2 newPos = entities[index].target;
+    new_target(index);
+    update_direction(index, newPos);
+    return newPos;
 }
 
 // void set_random_color(uint index) {
@@ -679,9 +684,9 @@ void main() {
         return;
     }
 
-    update_direction(index);
-    move(index);
-    quad_tree_update(index);
+    update_direction(index, entities[index].pos);
+    vec2 newPos = move(index);
+    quad_tree_update(index, newPos);
     if(check_collision(index)) {
         // set_random_color(index);
     }

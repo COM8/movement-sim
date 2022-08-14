@@ -1,4 +1,6 @@
 #include <array>
+#include <atomic>
+#include <barrier>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -7,6 +9,7 @@
 #include <limits>
 #include <random>
 #include <string>
+#include <thread>
 
 template <class T>
 struct vec4T {
@@ -42,42 +45,28 @@ using vec4 = vec4T<float>;
 using vec2 = vec2T<float>;
 using uvec4 = vec4T<uint>;
 
-void atomicAdd(uint& data, uint val) {
+template <class T>
+void atomicAdd(std::atomic<T>& data, T val) {
     data += val;
+    std::atomic_thread_fence(std::memory_order_release);
 }
 
-void atomicAdd(int& data, int val) {
-    data += val;
+void memoryBarrierBuffer() {
+    std::atomic_thread_fence(std::memory_order_release);
 }
 
-void memoryBarrierBuffer() {}
-
-uint atomicCompSwap(uint& data, uint comp, uint val) {
-    uint original = data;
-    if (original == comp) {
-        data = val;
+template <class T>
+T atomicCompSwap(std::atomic<T>& data, T comp, T val) {
+    T expected = comp;
+    if (data.compare_exchange_strong(expected, val)) {
+        return comp;
     }
-    return original;
+    return expected;
 }
 
-int atomicCompSwap(int& data, int comp, int val) {
-    int original = data;
-    if (original == comp) {
-        data = val;
-    }
-    return original;
-}
-
-uint atomicExchange(uint& data, uint val) {
-    uint original = data;
-    data = val;
-    return original;
-}
-
-int atomicExchange(int& data, int val) {
-    int original = data;
-    data = val;
-    return original;
+template <class T>
+T atomicExchange(std::atomic<T>& data, T val) {
+    return data.exchange(val);
 }
 
 struct EntityDescriptor {
@@ -98,9 +87,9 @@ struct PushConstantsDescriptor {
     uint maxDepth{0};
 } __attribute__((aligned(16)));
 
-const size_t MAX_DEPTH = 3;
-const size_t NUM_LEVELS = 21;
-const size_t NUM_ENTITIES = 20;
+const size_t MAX_DEPTH = 8;
+const size_t NUM_LEVELS = 21845;
+const size_t NUM_ENTITIES = 1000000;
 
 static std::array<EntityDescriptor, NUM_ENTITIES> entities{};
 static PushConstantsDescriptor pushConsts{29007.4609, 16463.7656, NUM_LEVELS, MAX_DEPTH};
@@ -113,9 +102,9 @@ uint TYPE_LEVEL = 1;
 uint TYPE_ENTITY = 2;
 
 struct QuadTreeLevelDescriptor {
-    int acquireLock{0};
-    int writeLock{0};
-    int readerLock{0};
+    std::atomic_int acquireLock{0};
+    std::atomic_int writeLock{0};
+    std::atomic_int readerLock{0};
 
     float offsetX{0};
     float offsetY{0};
@@ -154,8 +143,8 @@ static std::array<QuadTreeEntityDescriptor, NUM_ENTITIES> quadTreeEntities{};
  * [1]: Next free hint
  * [2... (levelCount + 2)]: Level locks
  **/
-static std::array<uint, NUM_LEVELS + 2> quadTreeLevelUsedStatus{};
-static std::array<uint, 10> debugData{};
+static std::array<std::atomic<uint>, NUM_LEVELS + 2> quadTreeLevelUsedStatus{};
+static std::array<std::atomic<uint>, 10> debugData{};
 
 uint LEVEL_ENTITY_CAP = 1;
 
@@ -181,7 +170,7 @@ size_t count_entities_rec(uint levelIndex) {
 
     uint actualCount = quadTreeLevels[levelIndex].entityCount;
     if (actualCount != expectedCount) {
-        std::cout << to_dot_graph() << '\n';
+        // std::cout << to_dot_graph() << '\n';
     }
     assert(actualCount == expectedCount);
     return quadTreeLevels[levelIndex].entityCount;
@@ -296,7 +285,7 @@ uint quad_tree_get_free_level_index() {
 
 uvec4 quad_tree_get_free_level_indices() {
     uvec4 indices = uvec4(0);
-    while (atomicCompSwap(quadTreeLevelUsedStatus[0], 0, 1) != 0) {}
+    while (atomicCompSwap(quadTreeLevelUsedStatus[0], static_cast<uint>(0), static_cast<uint>(1)) != 0) {}
 
     indices.x = quad_tree_get_free_level_index();
     indices.y = quad_tree_get_free_level_index();
@@ -304,13 +293,13 @@ uvec4 quad_tree_get_free_level_indices() {
     indices.w = quad_tree_get_free_level_index();
 
     memoryBarrierBuffer();
-    atomicExchange(quadTreeLevelUsedStatus[0], 0);
+    atomicExchange(quadTreeLevelUsedStatus[0], static_cast<uint>(0));
 
     return indices;
 }
 
 void quad_tree_free_level_indices(uvec4 indices) {
-    while (atomicCompSwap(quadTreeLevelUsedStatus[0], 0, 1) != 0) {}
+    while (atomicCompSwap(quadTreeLevelUsedStatus[0], static_cast<uint>(0), static_cast<uint>(1)) != 0) {}
 
     quadTreeLevelUsedStatus[indices.x + 2] = 0;
     quadTreeLevelUsedStatus[indices.y + 2] = 0;
@@ -320,7 +309,7 @@ void quad_tree_free_level_indices(uvec4 indices) {
     quadTreeLevelUsedStatus[1] = indices.x + 2;
 
     memoryBarrierBuffer();
-    atomicExchange(quadTreeLevelUsedStatus[0], 0);
+    atomicExchange(quadTreeLevelUsedStatus[0], static_cast<uint>(0));
 }
 
 void quad_tree_init_level(uint levelIndex, uint prevLevelIndex, float offsetX, float offsetY, float width, float height) {
@@ -410,7 +399,7 @@ bool quad_tree_same_pos_as_fist(uint levelIndex, vec2 ePos) {
 
 void quad_tree_insert(uint index, uint startLevelIndex, uint startLevelDepth) {
     // Count the number of inserted items:
-    atomicAdd(debugData[0], 1);
+    atomicAdd(debugData[0], static_cast<uint>(1));
 
     vec2 ePos = entities[index].pos;
     uint curDepth = startLevelDepth;
@@ -479,7 +468,8 @@ bool quad_tree_is_entity_on_level(uint index, uint levelIndex) {
 /**
  * Moves down the quad tree and locks all levels as read, except the last level, which gets locked as write so we can edit it.
  **/
-uint quad_tree_lock_for_entity_edit(vec2 oldPos) {
+uint quad_tree_lock_for_entity_edit(uint index) {
+    vec2 ePos = entities[index].pos;
     uint levelIndex = 0;
     while (true) {
         quad_tree_lock_level_read(levelIndex);
@@ -489,9 +479,9 @@ uint quad_tree_lock_for_entity_edit(vec2 oldPos) {
         // Go one level deeper:
         if (quadTreeLevels[levelIndex].contentType == TYPE_LEVEL) {
             // Left:
-            if (oldPos.x < offsetXNext) {
+            if (ePos.x < offsetXNext) {
                 // Top:
-                if (oldPos.y < offsetYNext) {
+                if (ePos.y < offsetYNext) {
                     levelIndex = quadTreeLevels[levelIndex].nextTL;
                 } else {
                     levelIndex = quadTreeLevels[levelIndex].nextBL;
@@ -500,7 +490,7 @@ uint quad_tree_lock_for_entity_edit(vec2 oldPos) {
             // Right:
             else {
                 // Top:
-                if (oldPos.y < offsetYNext) {
+                if (ePos.y < offsetYNext) {
                     levelIndex = quadTreeLevels[levelIndex].nextTR;
                 } else {
                     levelIndex = quadTreeLevels[levelIndex].nextBR;
@@ -517,6 +507,7 @@ uint quad_tree_lock_for_entity_edit(vec2 oldPos) {
                 quad_tree_unlock_level_write(levelIndex);
                 quad_tree_unlock_level_read(levelIndex);
             } else {
+                assert(quadTreeLevels[levelIndex].contentType == TYPE_ENTITY);
                 assert(levelIndex != 0);
                 return levelIndex;
             }
@@ -530,11 +521,11 @@ uint quad_tree_lock_for_entity_edit(vec2 oldPos) {
  **/
 bool quad_tree_remove_entity(uint index) {
     uint levelIndex = quadTreeEntities[index].levelIndex;
-    uint count = count_entities_rec(0);
+    // uint count = count_entities_rec(0);
     if (quadTreeLevels[levelIndex].entityCount <= 1) {
         quadTreeLevels[levelIndex].first = 0;
         quadTreeLevels[levelIndex].entityCount = 0;
-        validate_entity_count(count - 1);
+        // validate_entity_count(count - 1);
         return true;
     }
 
@@ -557,7 +548,7 @@ bool quad_tree_remove_entity(uint index) {
     quadTreeEntities[index].typeNext = TYPE_INVALID;
     quadTreeLevels[levelIndex].entityCount -= 1;
 
-    validate_entity_count(count - 1);
+    // validate_entity_count(count - 1);
     return false;
 }
 
@@ -574,7 +565,7 @@ bool quad_tree_try_merging_sublevel(uint levelIndex) {
         quad_tree_free_level_indices(uvec4(quadTreeLevels[levelIndex].nextTL, quadTreeLevels[levelIndex].nextTR, quadTreeLevels[levelIndex].nextBL, quadTreeLevels[levelIndex].nextBR));
         assert(quadTreeLevels[levelIndex].entityCount <= 0);
         quadTreeLevels[levelIndex].contentType = TYPE_ENTITY;
-        std::cout << "Merged levels of " << levelIndex << '\n';
+        // std::cout << "Merged levels of " << levelIndex << '\n';
         return true;
     }
     return false;
@@ -589,7 +580,7 @@ uint quad_tree_get_cur_depth(uint levelIndex) {
     return depth;
 }
 
-void quad_tree_update(uint index) {
+void quad_tree_update(uint index, vec2 newPos) {
     while (true) {
         uint oldLevelIndex = quadTreeEntities[index].levelIndex;
         quad_tree_lock_level_read(oldLevelIndex);
@@ -603,14 +594,18 @@ void quad_tree_update(uint index) {
 
     // Still on the same level, so we do not need to do anything:
     if (quad_tree_is_entity_on_level(index, quadTreeEntities[index].levelIndex)) {
+        entities[index].pos = newPos;
         quad_tree_unlock_level_read(quadTreeEntities[index].levelIndex);
         return;
     }
 
     uint levelIndex = quadTreeEntities[index].levelIndex;
     quad_tree_unlock_level_read(levelIndex);
-    uint newLevelIndex = quad_tree_lock_for_entity_edit(vec2(quadTreeLevels[levelIndex].offsetX, quadTreeLevels[levelIndex].offsetY));
-    assert(newLevelIndex == levelIndex);
+    levelIndex = quad_tree_lock_for_entity_edit(index);
+    if (levelIndex != quadTreeEntities[index].levelIndex) {
+        std::cout << to_dot_graph() << '\n';
+        assert(levelIndex == quadTreeEntities[index].levelIndex);
+    }
     if (quad_tree_remove_entity(index)) {
         // Try merging levels:
         while (levelIndex != quadTreeLevels[levelIndex].prevLevelIndex) {
@@ -629,6 +624,9 @@ void quad_tree_update(uint index) {
     }
     quad_tree_unlock_level_write(levelIndex);
 
+    // Update the removed entity position:
+    entities[index].pos = newPos;
+
     // Move up until we reach a level where our entity is on:
     while (!quad_tree_is_entity_on_level(index, levelIndex)) {
         uint oldLevelIndex = levelIndex;
@@ -639,30 +637,30 @@ void quad_tree_update(uint index) {
     // Insert the entity again:
     quad_tree_unlock_level_read(levelIndex);
     quad_tree_insert(index, levelIndex, quad_tree_get_cur_depth(levelIndex));
-    std::cout << "Updated " << index << '\n';
+    // std::cout << "Updated " << index << '\n';
 }
 
 // ------------------------------------------------------------------------------------
 
-void move(uint index) {
+vec2 move(uint /*index*/) {
     static std::random_device device;
     static std::mt19937 gen(device());
     static std::uniform_real_distribution<float> distr_x(0, pushConsts.worldSizeX);
     static std::uniform_real_distribution<float> distr_y(0, pushConsts.worldSizeY);
 
-    entities[index].pos = vec2(distr_x(gen), distr_y(gen));
+    return {distr_x(gen), distr_y(gen)};
 }
 
 void shader_main(uint index) {
     if (entities[index].initialized == 0) {
         quad_tree_insert(index, 0, 1);
         entities[index].initialized = 1;
-        std::cout << "Inserted: " << index << '\n';
+        // std::cout << "Inserted: " << index << '\n';
         return;
     }
 
-    move(index);
-    quad_tree_update(index);
+    vec2 newPos = move(index);
+    quad_tree_update(index, newPos);
 }
 
 void init() {
@@ -725,19 +723,39 @@ std::string to_dot_graph() {
 
 int main() {
     init();
-    size_t tick = 0;
-    while (true) {
-        for (size_t index = 0; index < entities.size(); index++) {
-            shader_main(index);
-            if (tick == 0) {
-                std::cout << to_dot_graph() << '\n';
-                validate_entity_count(index + 1);
-            } else {
-                std::cout << to_dot_graph() << '\n';
-                validate_entity_count(NUM_ENTITIES);
+    std::atomic<size_t> tick = 0;
+    std::vector<std::thread> threads;
+
+    const size_t THREAD_COUNT = 10;
+    std::barrier syncPoint(THREAD_COUNT);
+    std::barrier incSyncPoint(THREAD_COUNT);
+    for (size_t i = 0; i < THREAD_COUNT; i++) {
+        size_t start = (entities.size() / THREAD_COUNT) * i;
+        size_t end = (entities.size() / THREAD_COUNT) * (i + 1);
+        threads.emplace_back([start, end, i, &tick, &syncPoint, &incSyncPoint]() {
+            while (true) {
+                for (size_t index = start; index < end; index++) {
+                    shader_main(index);
+                    // if (tick == 0) {
+                    //     // std::cout << to_dot_graph() << '\n';
+                    //     validate_entity_count(index + 1);
+                    // } else {
+                    //     // std::cout << to_dot_graph() << '\n';
+                    //     validate_entity_count(NUM_ENTITIES);
+                    // }
+                }
+                syncPoint.arrive_and_wait();
+                if (i == 0) {
+                    validate_entity_count(NUM_ENTITIES);
+                    std::cout << "Shader ticked: " << tick++ << '\n';
+                }
+                incSyncPoint.arrive_and_wait();
             }
-        }
-        std::cout << "Shader ticked: " << tick++ << '\n';
+        });
+    }
+
+    for (std::thread& t : threads) {
+        t.join();
     }
     return EXIT_SUCCESS;
 }
