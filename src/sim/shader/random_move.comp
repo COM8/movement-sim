@@ -29,6 +29,7 @@ layout(push_constant) uniform PushConstants {
 
 	uint levelCount;
 	uint maxDepth;
+    uint entityLevelCap;
 } pushConsts;
 
 layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
@@ -91,8 +92,6 @@ layout(set = 0, binding = 4, std430) buffer bufQuadTreeEntities { QuadTreeEntity
 layout(set = 0, binding = 5, std430) buffer bufQuadTreeLevelStatus { uint quadTreeLevelUsedStatus[]; };
 
 layout(set = 0, binding = 6, std430) buffer bufDebugData { uint debugData[]; };
-
-uint LEVEL_ENTITY_CAP = 1;
 
 void quad_tree_lock_level_read(uint levelIndex) {
     while(atomicCompSwap(quadTreeLevels[levelIndex].acquireLock, 0, 1) != 0) {}
@@ -348,7 +347,7 @@ void quad_tree_insert(uint index, uint startLevelIndex, uint startLevelDepth) {
                 quad_tree_unlock_level_read(levelIndex);
             } else {
                 // Insert the entity in case there is space left, we can't go deeper or the entity has the same pos as the last:
-                if (quadTreeLevels[levelIndex].entityCount < LEVEL_ENTITY_CAP || curDepth >= pushConsts.maxDepth || quad_tree_same_pos_as_fist(levelIndex, ePos)) {
+                if (quadTreeLevels[levelIndex].entityCount < pushConsts.entityLevelCap || curDepth >= pushConsts.maxDepth || quad_tree_same_pos_as_fist(levelIndex, ePos)) {
                     quad_tree_append_entity(levelIndex, index);
                     memoryBarrierBuffer();
                     quad_tree_unlock_level_write(levelIndex);
@@ -677,6 +676,9 @@ vec2 move(uint index) {
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
+    if(index > 12500) {
+        return;
+    }
 
     if(entities[index].initialized == 0) {
         quad_tree_insert(index, 0, 1);

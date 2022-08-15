@@ -33,6 +33,7 @@ constexpr float MAX_RENDER_RESOLUTION_X = 8192;  // Larger values result in erro
 constexpr float MAX_RENDER_RESOLUTION_Y = 8192;
 
 constexpr size_t QUAD_TREE_MAX_DEPTH = 8;
+constexpr size_t QUAD_TREE_ENTITY_LEVEL_CAP = 10;
 
 class Simulator {
  private:

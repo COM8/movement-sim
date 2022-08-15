@@ -78,6 +78,7 @@ void Simulator::init() {
     pushConsts.worldSizeY = map->height;
     pushConsts.levelCount = static_cast<uint32_t>(quadTreeLevels->size());
     pushConsts.maxDepth = QUAD_TREE_MAX_DEPTH;
+    pushConsts.entityLevelCap = QUAD_TREE_ENTITY_LEVEL_CAP;
 
     algo = mgr.algorithm<float, PushConsts>(params, shader, {}, {}, {pushConsts});
 
