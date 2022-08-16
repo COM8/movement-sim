@@ -49,7 +49,7 @@ class Simulator {
     utils::TickDurationHistory tpsHistory{};
     utils::TickRate tps{};
 
-    kp::Manager mgr{};
+    std::shared_ptr<kp::Manager> mgr{nullptr};
     std::vector<uint32_t> shader{};
     std::shared_ptr<kp::Algorithm> algo{nullptr};
     std::vector<std::shared_ptr<kp::Tensor>> params{};
@@ -73,7 +73,7 @@ class Simulator {
     // ------------------------------------------
 
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
-    RENDERDOC_API_1_4_2* rdocApi{nullptr};
+    RENDERDOC_API_1_5_0* rdocApi{nullptr};
 #endif
 
  public:

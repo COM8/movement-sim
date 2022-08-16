@@ -1,5 +1,6 @@
 #include "Simulator.hpp"
 #include "fall.hpp"
+#include "kompute/Manager.hpp"
 #include "kompute/Tensor.hpp"
 #include "logger/Logger.hpp"
 #include "random_move.hpp"
@@ -33,6 +34,8 @@ void Simulator::init() {
     init_renderdoc();
 #endif
 
+    mgr = std::make_shared<kp::Manager>();
+
     // Load map:
     map = Map::load_from_file("/home/fabian/Documents/Repos/movement-sim/munich.json");
 
@@ -40,16 +43,16 @@ void Simulator::init() {
 
     // Entities:
     add_entities();
-    tensorEntities = mgr.tensor(entities->data(), entities->size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eUnsignedInt);
+    tensorEntities = mgr->tensor(entities->data(), entities->size(), sizeof(Entity), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
     // Uniform data:
-    tensorRoads = mgr.tensor(map->roads.data(), map->roads.size(), sizeof(Road), kp::Tensor::TensorDataTypes::eUnsignedInt);
-    tensorConnections = mgr.tensor(map->connections.data(), map->connections.size(), sizeof(unsigned int), kp::Tensor::TensorDataTypes::eUnsignedInt);
+    tensorRoads = mgr->tensor(map->roads.data(), map->roads.size(), sizeof(Road), kp::Tensor::TensorDataTypes::eUnsignedInt);
+    tensorConnections = mgr->tensor(map->connections.data(), map->connections.size(), sizeof(unsigned int), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
     // Quad Tree:
     static_assert(sizeof(gpu_quad_tree::Entity) == sizeof(uint32_t) * 5, "Quad Tree entity size does not match. Expected to be constructed out of 5 uint32_t.");
     quadTreeEntities.resize(MAX_ENTITIES);
-    tensorQuadTreeEntities = mgr.tensor(quadTreeEntities.data(), quadTreeEntities.size(), sizeof(gpu_quad_tree::Entity), kp::Tensor::TensorDataTypes::eUnsignedInt);
+    tensorQuadTreeEntities = mgr->tensor(quadTreeEntities.data(), quadTreeEntities.size(), sizeof(gpu_quad_tree::Entity), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
     assert(gpu_quad_tree::calc_level_count(1) == 1);
     assert(gpu_quad_tree::calc_level_count(2) == 5);
@@ -59,16 +62,16 @@ void Simulator::init() {
 
     quadTreeLevels->resize(gpu_quad_tree::calc_level_count(QUAD_TREE_MAX_DEPTH));
     gpu_quad_tree::init_level_zero((*quadTreeLevels)[0], map->width, map->height);
-    tensorQuadTreeLevels = mgr.tensor(quadTreeLevels->data(), quadTreeLevels->size(), sizeof(gpu_quad_tree::Level), kp::Tensor::TensorDataTypes::eUnsignedInt);
+    tensorQuadTreeLevels = mgr->tensor(quadTreeLevels->data(), quadTreeLevels->size(), sizeof(gpu_quad_tree::Level), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
     quadTreeLevelUsedStatus.resize(quadTreeLevels->size() + 2);  // +2 since one is used as lock and one as next pointer
     quadTreeLevelUsedStatus[1] = 2;  // Pointer to the first free level index;
-    tensorQuadTreeLevelUsedStatus = mgr.tensor(quadTreeLevelUsedStatus.data(), quadTreeLevelUsedStatus.size(), sizeof(uint32_t), kp::Tensor::TensorDataTypes::eUnsignedInt);
+    tensorQuadTreeLevelUsedStatus = mgr->tensor(quadTreeLevelUsedStatus.data(), quadTreeLevelUsedStatus.size(), sizeof(uint32_t), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
     // Debug data:
     std::vector<uint32_t> debugData;
     debugData.resize(10);
-    tensorDebugData = mgr.tensor(debugData.data(), debugData.size(), sizeof(uint32_t), kp::Tensor::TensorDataTypes::eUnsignedInt);
+    tensorDebugData = mgr->tensor(debugData.data(), debugData.size(), sizeof(uint32_t), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
     params = {tensorEntities, tensorConnections, tensorRoads, tensorQuadTreeLevels, tensorQuadTreeEntities, tensorQuadTreeLevelUsedStatus, tensorDebugData};
 
@@ -80,7 +83,7 @@ void Simulator::init() {
     pushConsts.maxDepth = QUAD_TREE_MAX_DEPTH;
     pushConsts.entityLevelCap = QUAD_TREE_ENTITY_LEVEL_CAP;
 
-    algo = mgr.algorithm<float, PushConsts>(params, shader, {}, {}, {pushConsts});
+    algo = mgr->algorithm<float, PushConsts>(params, shader, {}, {}, {pushConsts});
 
     check_device_queues();
 
@@ -168,15 +171,15 @@ void Simulator::sim_worker() {
 
     // Ensure the data is on the GPU:
     {
-        std::shared_ptr<kp::Sequence> sendSeq = mgr.sequence()->record<kp::OpTensorSyncDevice>(params);
+        std::shared_ptr<kp::Sequence> sendSeq = mgr->sequence()->record<kp::OpTensorSyncDevice>(params);
         sendSeq->eval();
     }
 
     // Prepare retrieve sequences:
-    std::shared_ptr<kp::Sequence> calcSeq = mgr.sequence()->record<kp::OpAlgoDispatch>(algo);
-    std::shared_ptr<kp::Sequence> retrieveEntitiesSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>({tensorEntities});
-    std::shared_ptr<kp::Sequence> retrieveQuadTreeLevelsSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>({tensorQuadTreeLevels});
-    std::shared_ptr<kp::Sequence> retrieveMiscSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>({tensorQuadTreeLevelUsedStatus, tensorQuadTreeEntities, tensorDebugData});
+    std::shared_ptr<kp::Sequence> calcSeq = mgr->sequence()->record<kp::OpAlgoDispatch>(algo);
+    std::shared_ptr<kp::Sequence> retrieveEntitiesSeq = mgr->sequence()->record<kp::OpTensorSyncLocal>({tensorEntities});
+    std::shared_ptr<kp::Sequence> retrieveQuadTreeLevelsSeq = mgr->sequence()->record<kp::OpTensorSyncLocal>({tensorQuadTreeLevels});
+    std::shared_ptr<kp::Sequence> retrieveMiscSeq = mgr->sequence()->record<kp::OpTensorSyncLocal>({tensorQuadTreeLevelUsedStatus, tensorQuadTreeEntities, tensorDebugData});
 
     std::unique_lock<std::mutex> lk(waitMutex);
     while (state == SimulatorState::RUNNING) {
@@ -281,7 +284,7 @@ const utils::TickDurationHistory& Simulator::get_tps_history() const {
 }
 
 void Simulator::check_device_queues() {
-    for (const vk::PhysicalDevice& device : mgr.listDevices()) {
+    for (const vk::PhysicalDevice& device : mgr->listDevices()) {
         std::string devInfo = device.getProperties().deviceName;
         devInfo += "\n";
         for (const vk::QueueFamilyProperties2& props : device.getQueueFamilyProperties2()) {
@@ -318,21 +321,35 @@ void Simulator::init_renderdoc() {
     // NOLINTNEXTLINE (google-readability-casting)
     pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI) dlsym(mod, "RENDERDOC_GetAPI");
     // NOLINTNEXTLINE (google-readability-casting)
-    int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_2, (void**) &rdocApi);
+    int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_5_0, (void**) &rdocApi);
     assert(ret == 1);
     SPDLOG_INFO("RenderDoc in application API initialized.");
 }
 
 void Simulator::start_frame_capture() {
     assert(rdocApi);
+    //NOLINTNEXTLINE (cppcoreguidelines-pro-type-union-access)
+    // assert(rdocApi->IsTargetControlConnected() == 1);
     // NOLINTNEXTLINE (google-readability-casting)
-    rdocApi->StartFrameCapture(RENDERDOC_DEVICEPOINTER_FROM_VKINSTANCE(mgr.getVkInstance().get()), nullptr);
+    // rdocApi->StartFrameCapture(RENDERDOC_DEVICEPOINTER_FROM_VKINSTANCE(mgr->getVkInstance().get()), nullptr);
+    rdocApi->StartFrameCapture(nullptr, nullptr);
+    // assert(rdocApi->IsFrameCapturing());
+    SPDLOG_INFO("Renderdoc frame capture started.");
 }
 
 void Simulator::end_frame_capture() {
     assert(rdocApi);
+    //NOLINTNEXTLINE (cppcoreguidelines-pro-type-union-access)
+    // assert(rdocApi->IsTargetControlConnected() == 1);
+    if (!rdocApi->IsFrameCapturing()) {
+        SPDLOG_WARN("Renderdoc no need to end frame capture, no capture running.");
+        return;
+    }
     // NOLINTNEXTLINE (google-readability-casting)
-    rdocApi->EndFrameCapture(RENDERDOC_DEVICEPOINTER_FROM_VKINSTANCE(mgr.getVkInstance().get()), nullptr);
+    // rdocApi->EndFrameCapture(RENDERDOC_DEVICEPOINTER_FROM_VKINSTANCE(mgr->getVkInstance().get()), nullptr);
+    rdocApi->EndFrameCapture(nullptr, nullptr);
+    // assert(!rdocApi->IsFrameCapturing());
+    SPDLOG_INFO("Renderdoc frame capture ended.");
 }
 #endif
 }  // namespace sim
