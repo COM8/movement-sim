@@ -7,6 +7,7 @@
 #include "sim/GpuQuadTree.hpp"
 #include "sim/Map.hpp"
 #include "sim/PushConsts.hpp"
+#include "sim/TickData.hpp"
 #include "spdlog/spdlog.h"
 #include "vulkan/vulkan_enums.hpp"
 #include <algorithm>
@@ -65,12 +66,17 @@ void Simulator::init() {
     quadTreeLevelUsedStatus[1] = 2;  // Pointer to the first free level index;
     tensorQuadTreeLevelUsedStatus = mgr.tensor(quadTreeLevelUsedStatus.data(), quadTreeLevelUsedStatus.size(), sizeof(uint32_t), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
+    // Tick data:
+    tickData.emplace_back(TickData{TICK_BUNCH_SIZE});
+    tickData[0].bunchOffset = 900000;
+    tensorTickData = mgr.tensor(tickData.data(), tickData.size(), sizeof(TickData), kp::Tensor::TensorDataTypes::eUnsignedInt);
+
     // Debug data:
     std::vector<uint32_t> debugData;
     debugData.resize(10);
     tensorDebugData = mgr.tensor(debugData.data(), debugData.size(), sizeof(uint32_t), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
-    params = {tensorEntities, tensorConnections, tensorRoads, tensorQuadTreeLevels, tensorQuadTreeEntities, tensorQuadTreeLevelUsedStatus, tensorDebugData};
+    params = {tensorEntities, tensorConnections, tensorRoads, tensorQuadTreeLevels, tensorQuadTreeEntities, tensorQuadTreeLevelUsedStatus, tensorTickData, tensorDebugData};
 
     // Push constants:
     PushConsts pushConsts{};
@@ -177,6 +183,7 @@ void Simulator::sim_worker() {
     std::shared_ptr<kp::Sequence> retrieveEntitiesSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>({tensorEntities});
     std::shared_ptr<kp::Sequence> retrieveQuadTreeLevelsSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>({tensorQuadTreeLevels});
     std::shared_ptr<kp::Sequence> retrieveMiscSeq = mgr.sequence()->record<kp::OpTensorSyncLocal>({tensorQuadTreeLevelUsedStatus, tensorQuadTreeEntities, tensorDebugData});
+    std::shared_ptr<kp::Sequence> sendTickSeq = mgr.sequence()->record<kp::OpTensorSyncDevice>({tensorTickData});
 
     std::unique_lock<std::mutex> lk(waitMutex);
     while (state == SimulatorState::RUNNING) {
@@ -186,12 +193,17 @@ void Simulator::sim_worker() {
         if (!simulating) {
             continue;
         }
-        sim_tick(calcSeq, retrieveEntitiesSeq, retrieveQuadTreeLevelsSeq, retrieveMiscSeq);
+        sim_tick(calcSeq, retrieveEntitiesSeq, retrieveQuadTreeLevelsSeq, retrieveMiscSeq, sendTickSeq);
     }
 }
 
-void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveEntitiesSeq, std::shared_ptr<kp::Sequence>& retrieveQuadTreeLevelsSeq, std::shared_ptr<kp::Sequence>& retrieveMiscSeq) {
+void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveEntitiesSeq, std::shared_ptr<kp::Sequence>& retrieveQuadTreeLevelsSeq, std::shared_ptr<kp::Sequence>& retrieveMiscSeq, std::shared_ptr<kp::Sequence>& /*sendTickSeq*/) {
     std::chrono::high_resolution_clock::time_point tickStart = std::chrono::high_resolution_clock::now();
+
+    tickData[0].perform_tick();
+    // for (size_t bunchOffset = 0; bunchOffset < MAX_ENTITIES; bunchOffset += TICK_BUNCH_SIZE) {
+    //     tickData[0].set_bunch_offset(bunchOffset);
+    //     sendTickSeq->eval();
 
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
     start_frame_capture();
@@ -201,6 +213,7 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
     end_frame_capture();
 #endif
+    // }
 
     bool retrievingEntities = !entities;
     if (retrievingEntities) {

@@ -32,6 +32,13 @@ layout(push_constant) uniform PushConstants {
     uint entityLevelCap;
 } pushConsts;
 
+struct TickDataDescriptor {
+    uint tick;
+    uint bunchCount;
+    uint bunchOffset;
+    uint padding;
+};
+
 layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
 
 layout(set = 0, binding = 1, std430) buffer readonly bufConnections { uint connections[]; };
@@ -91,7 +98,8 @@ layout(set = 0, binding = 4, std430) buffer bufQuadTreeEntities { QuadTreeEntity
  **/
 layout(set = 0, binding = 5, std430) buffer bufQuadTreeLevelStatus { uint quadTreeLevelUsedStatus[]; };
 
-layout(set = 0, binding = 6, std430) buffer bufDebugData { uint debugData[]; };
+layout(set = 0, binding = 6, std430) buffer bufTickData { TickDataDescriptor tickData[]; };
+layout(set = 0, binding = 7, std430) buffer bufDebugData { uint debugData[]; };
 
 void quad_tree_lock_level_read(uint levelIndex) {
     while(atomicCompSwap(quadTreeLevels[levelIndex].acquireLock, 0, 1) != 0) {}
@@ -676,7 +684,7 @@ vec2 move(uint index) {
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
-    if(index > 12500) {
+    if((index < tickData[0].bunchOffset) || (index >= (tickData[0].bunchOffset + tickData[0].bunchCount))) {
         return;
     }
 

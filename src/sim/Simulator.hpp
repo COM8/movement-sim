@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GpuQuadTree.hpp"
+#include "TickData.hpp"
 #include "sim/Entity.hpp"
 #include "utils/TickDurationHistory.hpp"
 #include "utils/TickRate.hpp"
@@ -29,6 +30,7 @@ enum class SimulatorState {
 };
 
 constexpr size_t MAX_ENTITIES = 1000000;
+constexpr size_t TICK_BUNCH_SIZE = 10000;
 constexpr float MAX_RENDER_RESOLUTION_X = 8192;  // Larger values result in errors when creating frame buffers
 constexpr float MAX_RENDER_RESOLUTION_Y = 8192;
 
@@ -58,6 +60,8 @@ class Simulator {
     std::shared_ptr<kp::Tensor> tensorEntities{nullptr};
     std::shared_ptr<kp::Tensor> tensorConnections{nullptr};
     std::shared_ptr<kp::Tensor> tensorRoads{nullptr};
+    std::shared_ptr<kp::Tensor> tensorTickData{nullptr};
+    std::vector<TickData> tickData{};
     std::shared_ptr<kp::Tensor> tensorDebugData{nullptr};
 
     std::shared_ptr<Map> map{nullptr};
@@ -105,7 +109,7 @@ class Simulator {
 
  private:
     void sim_worker();
-    void sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveEntitiesSeq, std::shared_ptr<kp::Sequence>& retrieveQuadTreeLevelsSeq, std::shared_ptr<kp::Sequence>& retrieveMiscSeq);
+    void sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveEntitiesSeq, std::shared_ptr<kp::Sequence>& retrieveQuadTreeLevelsSeq, std::shared_ptr<kp::Sequence>& retrieveMiscSeq, std::shared_ptr<kp::Sequence>& sendTickSeq);
     void add_entities();
     void check_device_queues();
 
