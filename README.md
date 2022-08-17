@@ -1,6 +1,17 @@
 # Movement Simulator
 GPU accelerated human movement simulator.
 
+## Disable GPU Hangcheck
+
+### Intel
+Source: https://www.intel.com/content/www/us/en/develop/documentation/get-started-with-intel-oneapi-hpc-linux/top/before-you-begin.html
+
+```
+grub2-mkconfig -o "$(readlink -e /etc/grub2.cfg)"
+```
+
+Intel Bug: https://gitlab.freedesktop.org/drm/intel/-/issues/562
+
 ## Building
 ### Requirements
 
