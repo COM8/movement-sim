@@ -30,6 +30,8 @@ layout(push_constant) uniform PushConstants {
 	uint levelCount;
 	uint maxDepth;
     uint entityLevelCap;
+    
+    float collisionRadius;
 } pushConsts;
 
 layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
@@ -533,6 +535,157 @@ void quad_tree_update(uint index, vec2 newPos) {
     quad_tree_insert(index, levelIndex, quad_tree_get_cur_depth(levelIndex));
 }
 
+/**
+ * Collision routine that gets called each time we notice a collision.
+ * Called only once per collision pair.
+ **/
+void quad_tree_collision(uint index0, uint index1) {
+    entities[index0].color = vec4(1, 0, 0, 1);
+    entities[index1].color = vec4(1, 0, 0, 1);
+    atomicAdd(debugData[1], 1);
+}
+
+void quad_tree_check_entity_collisions_on_level(uint index, uint levelIndex) {
+    if (quadTreeLevels[levelIndex].entityCount <= 0) {
+        return;
+    }
+
+    vec2 ePos = entities[index].pos;
+
+    uint curEntityIndex = quadTreeLevels[levelIndex].first;
+    while (true) {
+        // Prevent checking collision with our self and prevent duplicate entries by checking only for ones where the ID is smaller than ours:
+        if (curEntityIndex < index && distance(entities[curEntityIndex].pos, ePos) <= pushConsts.collisionRadius) {
+            quad_tree_collision(index, curEntityIndex);
+        }
+
+        if (quadTreeEntities[curEntityIndex].typeNext != TYPE_ENTITY) {
+            break;
+        }
+        curEntityIndex = quadTreeEntities[curEntityIndex].next;
+    }
+}
+
+/**
+ * Returns the next (TL -> TR -> BL -> BR -> 0) level index of the parent level.
+ * Returns 0 in case the given levelIndex is BR of the parent level.
+ **/
+uint quad_tree_get_next_level_index(uint levelIndex) {
+    uint prevLevelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
+    if (quadTreeLevels[prevLevelIndex].nextTL == levelIndex) {
+        return quadTreeLevels[prevLevelIndex].nextTR;
+    }
+
+    if (quadTreeLevels[prevLevelIndex].nextTR == levelIndex) {
+        return quadTreeLevels[prevLevelIndex].nextBL;
+    }
+
+    if (quadTreeLevels[prevLevelIndex].nextBL == levelIndex) {
+        return quadTreeLevels[prevLevelIndex].nextBR;
+    }
+
+    return 0;
+}
+
+bool quad_tree_collision_on_level(uint index, uint levelIndex) {
+    float levelOffsetX = quadTreeLevels[levelIndex].offsetX;
+    float levelOffsetY = quadTreeLevels[levelIndex].offsetY;
+
+    vec2 ePos = entities[index].pos;
+    vec2 aabbHalfExtents = vec2((quadTreeLevels[levelIndex].width / 2), (quadTreeLevels[levelIndex].height / 2));
+    vec2 levelCenter = vec2(levelOffsetX, levelOffsetY) + aabbHalfExtents;
+    vec2 diff = ePos - levelCenter;
+    vec2 clamped = clamp(diff, vec2(-aabbHalfExtents.x, -aabbHalfExtents.y), aabbHalfExtents);
+    vec2 closest = levelCenter + clamped;
+    diff = closest - ePos;
+    return length(diff) < pushConsts.collisionRadius;
+}
+
+void quad_tree_check_collisions_on_level(uint index, uint levelIndex) {
+    if (quadTreeLevels[levelIndex].contentType == TYPE_ENTITY) {
+        quad_tree_check_entity_collisions_on_level(index, levelIndex);
+        return;
+    }
+
+    uint curLevelIndex = quadTreeLevels[levelIndex].nextTL;
+    uint sourceLevelIndex = levelIndex;
+    while (true) {
+        if (quadTreeLevels[curLevelIndex].contentType == TYPE_ENTITY) {
+            if (quad_tree_collision_on_level(index, curLevelIndex)) {
+                quad_tree_check_entity_collisions_on_level(index, curLevelIndex);
+            }
+
+            curLevelIndex = quad_tree_get_next_level_index(curLevelIndex);
+            while (true) {
+                if (curLevelIndex == 0) {
+                    if (quadTreeLevels[sourceLevelIndex].prevLevelIndex == sourceLevelIndex) {
+                        return;
+                    }
+                    curLevelIndex = quad_tree_get_next_level_index(sourceLevelIndex);
+                    sourceLevelIndex = quadTreeLevels[sourceLevelIndex].prevLevelIndex;
+                } else {
+                    break;
+                }
+            }
+        } else {
+            sourceLevelIndex = curLevelIndex;
+            curLevelIndex = quadTreeLevels[curLevelIndex].nextTL;
+        }
+    }
+}
+
+bool quad_tree_collisions_only_on_same_level(uint index, uint levelIndex) {
+    float levelOffsetX = quadTreeLevels[levelIndex].offsetX;
+    float levelOffsetY = quadTreeLevels[levelIndex].offsetY;
+
+    vec2 ePos = entities[index].pos;
+    vec2 minEPos = ePos - vec2(pushConsts.collisionRadius);
+    vec2 maxEPos = ePos + vec2(pushConsts.collisionRadius);
+
+    return (minEPos.x >= levelOffsetX) && (maxEPos.x < quadTreeLevels[levelIndex].width)
+        && (minEPos.y >= levelOffsetY) && (maxEPos.y < quadTreeLevels[levelIndex].height);
+}
+
+/**
+ * Checks for collisions inside the pushConsts.collisionRadius with other entities.
+ * Will invoke quad_tree_collision(index, otherIndex) only in case index < otherIndex
+ * to prevent duplicate invocations.
+ **/
+void quad_tree_check_collisions(uint index) {
+    uint levelIndex = quadTreeEntities[index].levelIndex;
+    quad_tree_check_collisions_on_level(index, levelIndex);
+
+    if (quad_tree_collisions_only_on_same_level(index, levelIndex)) {
+        return;
+    }
+
+    uint prevLevelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
+    while (levelIndex != prevLevelIndex) {
+        if (levelIndex != quadTreeLevels[prevLevelIndex].nextTL && quad_tree_collision_on_level(index, quadTreeLevels[prevLevelIndex].nextTL)) {
+            quad_tree_check_collisions_on_level(index, quadTreeLevels[prevLevelIndex].nextTL);
+        }
+
+        if (levelIndex != quadTreeLevels[prevLevelIndex].nextTR && quad_tree_collision_on_level(index, quadTreeLevels[prevLevelIndex].nextTR)) {
+            quad_tree_check_collisions_on_level(index, quadTreeLevels[prevLevelIndex].nextTR);
+        }
+
+        if (levelIndex != quadTreeLevels[prevLevelIndex].nextBL && quad_tree_collision_on_level(index, quadTreeLevels[prevLevelIndex].nextBL)) {
+            quad_tree_check_collisions_on_level(index, quadTreeLevels[prevLevelIndex].nextBL);
+        }
+
+        if (levelIndex != quadTreeLevels[prevLevelIndex].nextBR && quad_tree_collision_on_level(index, quadTreeLevels[prevLevelIndex].nextBR)) {
+            quad_tree_check_collisions_on_level(index, quadTreeLevels[prevLevelIndex].nextBR);
+        }
+
+        if (quad_tree_collisions_only_on_same_level(index, levelIndex)) {
+            return;
+        }
+
+        levelIndex = prevLevelIndex;
+        prevLevelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
+    }
+}
+
 // ------------------------------------------------------------------------------------
 // 128 Bit XOR-Shift
 // Source: https://en.wikipedia.org/wiki/Xorshift
@@ -563,7 +716,7 @@ uint next(inout uvec4 state, uint min, uint max) {
 
 float SPEED = 1.4;
 
-bool check_collision(uint index) {
+bool check_border_collision(uint index) {
     bool collision = false;
     if(entities[index].pos.x > pushConsts.worldSizeX) {
         entities[index].pos.x = pushConsts.worldSizeX;
@@ -664,21 +817,19 @@ vec2 move(uint index) {
     return newPos;
 }
 
-// void set_random_color(uint index) {
-//     int seed = entities[index].randSeed;
-//     entities[index].color.r = entities[index].pos.x / pushConsts.worldSizeX;
-//     seed = nextInt(seed);
-//     entities[index].color.g = entities[index].pos.y / pushConsts.worldSizeY;
-//     seed = nextInt(seed);
-//     entities[index].color.b = 0.0;
-//     entities[index].randSeed = nextInt(seed);
-// }
-
 void main() {
     uint index = gl_GlobalInvocationID.x;
-    if(index > 12500) {
-        return;
-    }
+
+    // while(atomicCompSwap(debugData[5], 0, 1) != 0) {}
+    // memoryBarrierBuffer();
+    // atomicExchange(debugData[5], 0);
+    // memoryBarrierBuffer();
+    // return;
+    
+    entities[index].color = vec4(0, 1, 0, 1);
+    // if(index > 12500) {
+    //     return;
+    // }
 
     if(entities[index].initialized == 0) {
         quad_tree_insert(index, 0, 1);
@@ -686,10 +837,10 @@ void main() {
         return;
     }
 
-    update_direction(index, entities[index].pos);
-    vec2 newPos = move(index);
-    quad_tree_update(index, newPos);
-    if(check_collision(index)) {
-        // set_random_color(index);
-    }
+    // update_direction(index, entities[index].pos);
+    // vec2 newPos = move(index);
+    // quad_tree_update(index, newPos);
+
+    entities[index].color = vec4(0, 1, 0, 1);
+    quad_tree_check_collisions(index);
 }

@@ -2,6 +2,7 @@
 #include <atomic>
 #include <barrier>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -37,6 +38,26 @@ struct vec2T {
     bool operator==(const vec2T<T>& other) const {
         return other.x == x && other.y == y;
     }
+
+    vec2T<T> operator-(const vec2T<T>& other) {
+        return {x - other.x, y - other.y};
+    }
+
+    vec2T<T>& operator-=(const vec2T<T>& other) {
+        x -= other.x;
+        y -= other.y;
+        return *this;
+    }
+
+    vec2T<T> operator+(const vec2T<T>& other) {
+        return {x + other.x, y + other.y};
+    }
+
+    vec2T<T>& operator+=(const vec2T<T>& other) {
+        x += other.x;
+        y += other.y;
+        return *this;
+    }
 } __attribute__((packed)) __attribute__((aligned(8)));
 
 using uint = uint32_t;
@@ -69,6 +90,18 @@ T atomicExchange(std::atomic<T>& data, T val) {
     return data.exchange(val);
 }
 
+float distance(vec2 v1, vec2 v2) {
+    return static_cast<float>(std::sqrt(std::pow(v2.x - v1.x, 2) + std::pow(v2.y - v1.y, 2)));
+}
+
+float length(vec2 v1) {
+    return static_cast<float>(std::sqrt(std::pow(v1.x, 2) + std::pow(v1.y, 2)));
+}
+
+vec2 clamp(vec2 v, vec2 minVec, vec2 maxVec) {
+    return {std::max(minVec.x, std::min(maxVec.x, v.x)), std::max(minVec.y, std::min(maxVec.y, v.y))};
+}
+
 struct EntityDescriptor {
     vec4 color{0};  // Offset: 0-15
     uvec4 randState{0};  // Offset 16-31
@@ -85,14 +118,17 @@ struct PushConstantsDescriptor {
 
     uint levelCount{0};
     uint maxDepth{0};
-} __attribute__((aligned(16)));
+
+    float collisionRadius{0};
+} __attribute__((aligned(32)));
 
 const size_t MAX_DEPTH = 8;
 const size_t NUM_LEVELS = 21845;
 const size_t NUM_ENTITIES = 1000000;
+const float COLLISION_RADIUS = 10;
 
 static std::array<EntityDescriptor, NUM_ENTITIES> entities{};
-static PushConstantsDescriptor pushConsts{29007.4609, 16463.7656, NUM_LEVELS, MAX_DEPTH};
+static PushConstantsDescriptor pushConsts{29007.4609, 16463.7656, NUM_LEVELS, MAX_DEPTH, COLLISION_RADIUS};
 
 // ------------------------------------------------------------------------------------
 // Quad Tree
@@ -101,6 +137,7 @@ uint TYPE_INVALID = 0;
 uint TYPE_LEVEL = 1;
 uint TYPE_ENTITY = 2;
 
+// NOLINTNEXTLINE (hicpp-special-member-functions)
 struct QuadTreeLevelDescriptor {
     std::atomic_int acquireLock{0};
     std::atomic_int writeLock{0};
@@ -123,6 +160,36 @@ struct QuadTreeLevelDescriptor {
     uint nextBR{0};
 
     uint padding{0};
+
+    QuadTreeLevelDescriptor& operator=(const QuadTreeLevelDescriptor& other) {
+        if (this == &other) {
+            return *this;
+        }
+
+        acquireLock = static_cast<int>(other.acquireLock);
+        writeLock = static_cast<int>(other.writeLock);
+        readerLock = static_cast<int>(other.readerLock);
+
+        offsetX = other.offsetX;
+        offsetY = other.offsetY;
+        width = other.width;
+        height = other.height;
+
+        contentType = other.contentType;
+        entityCount = other.entityCount;
+        first = other.first;
+
+        prevLevelIndex = other.prevLevelIndex;
+
+        nextTL = other.nextTL;
+        nextTR = other.nextTR;
+        nextBL = other.nextBL;
+        nextBR = other.nextBR;
+
+        padding = other.padding;
+
+        return *this;
+    }
 } __attribute__((aligned(64)));
 
 struct QuadTreeEntityDescriptor {
@@ -640,6 +707,156 @@ void quad_tree_update(uint index, vec2 newPos) {
     // std::cout << "Updated " << index << '\n';
 }
 
+/**
+ * Collision routine that gets called each time we notice a collision.
+ * Called only once per collision pair.
+ **/
+void quad_tree_collision(uint index0, uint index1) {
+    entities[index0].color = vec4(1, 0, 0, 1);
+    entities[index1].color = vec4(1, 0, 0, 1);
+    atomicAdd(debugData[1], static_cast<uint>(1));
+}
+
+void quad_tree_check_entity_collisions_on_level(uint index, uint levelIndex) {
+    if (quadTreeLevels[levelIndex].entityCount <= 0) {
+        return;
+    }
+
+    vec2 ePos = entities[index].pos;
+
+    uint curEntityIndex = quadTreeLevels[levelIndex].first;
+    while (true) {
+        // Prevent checking collision with our self and prevent duplicate entries by checking only for ones where the ID is smaller than ours:
+        if (curEntityIndex < index && distance(entities[curEntityIndex].pos, ePos) <= pushConsts.collisionRadius) {
+            quad_tree_collision(index, curEntityIndex);
+        }
+
+        if (quadTreeEntities[curEntityIndex].typeNext != TYPE_ENTITY) {
+            break;
+        }
+        curEntityIndex = quadTreeEntities[curEntityIndex].next;
+    }
+}
+
+/**
+ * Returns the next (TL -> TR -> BL -> BR -> 0) level index of the parent level.
+ * Returns 0 in case the given levelIndex is BR of the parent level.
+ **/
+uint quad_tree_get_next_level_index(uint levelIndex) {
+    uint prevLevelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
+    if (quadTreeLevels[prevLevelIndex].nextTL == levelIndex) {
+        return quadTreeLevels[prevLevelIndex].nextTR;
+    }
+
+    if (quadTreeLevels[prevLevelIndex].nextTR == levelIndex) {
+        return quadTreeLevels[prevLevelIndex].nextBL;
+    }
+
+    if (quadTreeLevels[prevLevelIndex].nextBL == levelIndex) {
+        return quadTreeLevels[prevLevelIndex].nextBR;
+    }
+
+    return 0;
+}
+
+bool quad_tree_collision_on_level(uint index, uint levelIndex) {
+    float levelOffsetX = quadTreeLevels[levelIndex].offsetX;
+    float levelOffsetY = quadTreeLevels[levelIndex].offsetY;
+
+    vec2 ePos = entities[index].pos;
+    vec2 aabbHalfExtents = vec2((quadTreeLevels[levelIndex].width / 2), (quadTreeLevels[levelIndex].height / 2));
+    vec2 levelCenter = vec2(levelOffsetX, levelOffsetY) + aabbHalfExtents;
+    vec2 diff = ePos - levelCenter;
+    vec2 clamped = clamp(diff, vec2(-aabbHalfExtents.x, -aabbHalfExtents.y), aabbHalfExtents);
+    vec2 closest = levelCenter + clamped;
+    diff = closest - ePos;
+    return length(diff) < pushConsts.collisionRadius;
+}
+
+void quad_tree_check_collisions_on_level(uint index, uint levelIndex) {
+    if (quadTreeLevels[levelIndex].contentType == TYPE_ENTITY) {
+        quad_tree_check_entity_collisions_on_level(index, levelIndex);
+        return;
+    }
+
+    uint curLevelIndex = quadTreeLevels[levelIndex].nextTL;
+    uint sourceLevelIndex = levelIndex;
+    while (true) {
+        if (quadTreeLevels[curLevelIndex].contentType == TYPE_ENTITY) {
+            if (quad_tree_collision_on_level(index, curLevelIndex)) {
+                quad_tree_check_entity_collisions_on_level(index, curLevelIndex);
+            }
+
+            curLevelIndex = quad_tree_get_next_level_index(curLevelIndex);
+            while (true) {
+                if (curLevelIndex == 0) {
+                    if (quadTreeLevels[sourceLevelIndex].prevLevelIndex == sourceLevelIndex) {
+                        return;
+                    }
+                    curLevelIndex = quad_tree_get_next_level_index(sourceLevelIndex);
+                    sourceLevelIndex = quadTreeLevels[sourceLevelIndex].prevLevelIndex;
+                } else {
+                    break;
+                }
+            }
+        } else {
+            sourceLevelIndex = curLevelIndex;
+            curLevelIndex = quadTreeLevels[curLevelIndex].nextTL;
+        }
+    }
+}
+
+bool quad_tree_collisions_only_on_same_level(uint index, uint levelIndex) {
+    float levelOffsetX = quadTreeLevels[levelIndex].offsetX;
+    float levelOffsetY = quadTreeLevels[levelIndex].offsetY;
+
+    vec2 ePos = entities[index].pos;
+    vec2 minEPos = ePos - vec2(pushConsts.collisionRadius);
+    vec2 maxEPos = ePos + vec2(pushConsts.collisionRadius);
+
+    return (minEPos.x >= levelOffsetX) && (maxEPos.x < quadTreeLevels[levelIndex].width) && (minEPos.y >= levelOffsetY) && (maxEPos.y < quadTreeLevels[levelIndex].height);
+}
+
+/**
+ * Checks for collisions inside the pushConsts.collisionRadius with other entities.
+ * Will invoke quad_tree_collision(index, otherIndex) only in case index < otherIndex
+ * to prevent duplicate invocations.
+ **/
+void quad_tree_check_collisions(uint index) {
+    uint levelIndex = quadTreeEntities[index].levelIndex;
+    quad_tree_check_collisions_on_level(index, levelIndex);
+
+    if (quad_tree_collisions_only_on_same_level(index, levelIndex)) {
+        return;
+    }
+
+    uint prevLevelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
+    while (levelIndex != prevLevelIndex) {
+        if (levelIndex != quadTreeLevels[prevLevelIndex].nextTL && quad_tree_collision_on_level(index, quadTreeLevels[prevLevelIndex].nextTL)) {
+            quad_tree_check_collisions_on_level(index, quadTreeLevels[prevLevelIndex].nextTL);
+        }
+
+        if (levelIndex != quadTreeLevels[prevLevelIndex].nextTR && quad_tree_collision_on_level(index, quadTreeLevels[prevLevelIndex].nextTR)) {
+            quad_tree_check_collisions_on_level(index, quadTreeLevels[prevLevelIndex].nextTR);
+        }
+
+        if (levelIndex != quadTreeLevels[prevLevelIndex].nextBL && quad_tree_collision_on_level(index, quadTreeLevels[prevLevelIndex].nextBL)) {
+            quad_tree_check_collisions_on_level(index, quadTreeLevels[prevLevelIndex].nextBL);
+        }
+
+        if (levelIndex != quadTreeLevels[prevLevelIndex].nextBR && quad_tree_collision_on_level(index, quadTreeLevels[prevLevelIndex].nextBR)) {
+            quad_tree_check_collisions_on_level(index, quadTreeLevels[prevLevelIndex].nextBR);
+        }
+
+        if (quad_tree_collisions_only_on_same_level(index, levelIndex)) {
+            return;
+        }
+
+        levelIndex = prevLevelIndex;
+        prevLevelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
+    }
+}
+
 // ------------------------------------------------------------------------------------
 
 vec2 move(uint /*index*/) {
@@ -661,6 +878,24 @@ void shader_main(uint index) {
 
     vec2 newPos = move(index);
     quad_tree_update(index, newPos);
+}
+
+void reset() {
+    for (std::atomic<uint>& i : quadTreeLevelUsedStatus) {
+        i = 0;
+    }
+
+    for (QuadTreeLevelDescriptor& quadTreeLevel : quadTreeLevels) {
+        quadTreeLevel = QuadTreeLevelDescriptor();
+    }
+
+    for (QuadTreeEntityDescriptor& quadTreeEntity : quadTreeEntities) {
+        quadTreeEntity = QuadTreeEntityDescriptor();
+    }
+
+    for (std::atomic<uint>& i : debugData) {
+        i = 0;
+    }
 }
 
 void init() {
@@ -721,7 +956,7 @@ std::string to_dot_graph() {
     return result + '}';
 }
 
-int main() {
+void run_default() {
     init();
     std::atomic<size_t> tick = 0;
     std::vector<std::thread> threads;
@@ -757,5 +992,78 @@ int main() {
     for (std::thread& t : threads) {
         t.join();
     }
+}
+
+void run_collision_detection_test_1() {
+    std::cout << "Running run_collision_detection_test_1...\n";
+    reset();
+    init();
+
+    entities[0].pos = vec2((pushConsts.worldSizeX / 2) - 3, 0);
+    quad_tree_insert(0, 0, 1);
+    validate_entity_count(1);
+    quad_tree_check_collisions(0);
+    assert(debugData[1] == 0);
+    debugData[1] = 0;
+
+    entities[1].pos = vec2((pushConsts.worldSizeX / 2) + 3, 0);
+    quad_tree_insert(1, 0, 1);
+    validate_entity_count(2);
+    quad_tree_check_collisions(0);
+    assert(debugData[1] == 0);
+    quad_tree_check_collisions(1);
+    assert(debugData[1] == 1);
+    debugData[1] = 0;
+
+    entities[2].pos = vec2(0, 0);
+    quad_tree_insert(2, 0, 1);
+    validate_entity_count(3);
+    quad_tree_check_collisions(0);
+    assert(debugData[1] == 0);
+    quad_tree_check_collisions(1);
+    assert(debugData[1] == 1);
+    quad_tree_check_collisions(2);
+    assert(debugData[1] == 1);
+    debugData[1] = 0;
+
+    entities[3].pos = vec2((pushConsts.worldSizeX / 4), 0);
+    quad_tree_insert(3, 0, 1);
+    validate_entity_count(4);
+    quad_tree_check_collisions(0);
+    assert(debugData[1] == 0);
+    quad_tree_check_collisions(1);
+    assert(debugData[1] == 1);
+    quad_tree_check_collisions(2);
+    assert(debugData[1] == 1);
+    quad_tree_check_collisions(3);
+    assert(debugData[1] == 1);
+    debugData[1] = 0;
+
+    entities[4].pos = vec2((pushConsts.worldSizeX / 4) - 9, 0);
+    quad_tree_insert(4, 0, 1);
+    validate_entity_count(5);
+    quad_tree_check_collisions(0);
+    assert(debugData[1] == 0);
+    quad_tree_check_collisions(1);
+    assert(debugData[1] == 1);
+    quad_tree_check_collisions(2);
+    assert(debugData[1] == 1);
+    quad_tree_check_collisions(3);
+    assert(debugData[1] == 1);
+    quad_tree_check_collisions(4);
+    assert(debugData[1] == 2);
+    debugData[1] = 0;
+
+    std::cout << "run_collision_detection_test_1 was successful.\n";
+}
+
+void run_tests() {
+    run_collision_detection_test_1();
+}
+
+int main() {
+    run_tests();
+    // run_default();
+
     return EXIT_SUCCESS;
 }

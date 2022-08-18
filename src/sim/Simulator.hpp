@@ -28,12 +28,17 @@ enum class SimulatorState {
     JOINING
 };
 
-constexpr size_t MAX_ENTITIES = 1000000;
+constexpr size_t MAX_ENTITIES = 12500;
 constexpr float MAX_RENDER_RESOLUTION_X = 8192;  // Larger values result in errors when creating frame buffers
 constexpr float MAX_RENDER_RESOLUTION_Y = 8192;
 
 constexpr size_t QUAD_TREE_MAX_DEPTH = 8;
 constexpr size_t QUAD_TREE_ENTITY_LEVEL_CAP = 10;
+
+/**
+ * Specifies the collision radius in meters.
+ **/
+constexpr float COLLISION_RADIUS = 10;
 
 class Simulator {
  private:
