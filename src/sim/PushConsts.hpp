@@ -15,5 +15,7 @@ struct PushConsts {
     uint32_t entityLevelCap{0};
 
     float collisionRadius{0};
+
+    uint32_t tick{0};
 } __attribute__((packed)) __attribute__((aligned(4)));
 }  // namespace sim

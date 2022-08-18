@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GpuQuadTree.hpp"
+#include "PushConsts.hpp"
 #include "sim/Entity.hpp"
 #include "utils/TickDurationHistory.hpp"
 #include "utils/TickRate.hpp"
@@ -58,6 +59,8 @@ class Simulator {
     std::vector<uint32_t> shader{};
     std::shared_ptr<kp::Algorithm> algo{nullptr};
     std::vector<std::shared_ptr<kp::Tensor>> params{};
+
+    PushConsts pushConsts{};
 
     std::shared_ptr<std::vector<Entity>> entities{std::make_shared<std::vector<Entity>>()};
     std::shared_ptr<kp::Tensor> tensorEntities{nullptr};
