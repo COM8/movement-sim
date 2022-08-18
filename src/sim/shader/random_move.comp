@@ -32,6 +32,8 @@ layout(push_constant) uniform PushConstants {
     uint entityLevelCap;
     
     float collisionRadius;
+
+    uint tick;
 } pushConsts;
 
 layout(set = 0, binding = 0) buffer bufEntity { EntityDescriptor entities[]; };
@@ -81,6 +83,8 @@ struct QuadTreeEntityDescriptor {
 
     uint typePrev;
     uint prev;
+
+    uint tick;
 };
 
 // TODO add memory qualifiers: https://www.khronos.org/opengl/wiki/Shader_Storage_Buffer_Object
@@ -540,8 +544,8 @@ void quad_tree_update(uint index, vec2 newPos) {
  * Called only once per collision pair.
  **/
 void quad_tree_collision(uint index0, uint index1) {
-    entities[index0].color = vec4(1, 0, 0, 1);
-    entities[index1].color = vec4(1, 0, 0, 1);
+    entities[index0].color = vec4(0, 0, 1, 1);
+    entities[index1].color = vec4(0, 0, 1, 1);
     atomicAdd(debugData[1], 1);
 }
 
@@ -826,7 +830,6 @@ void main() {
     // memoryBarrierBuffer();
     // return;
     
-    entities[index].color = vec4(0, 1, 0, 1);
     // if(index > 12500) {
     //     return;
     // }
@@ -834,13 +837,19 @@ void main() {
     if(entities[index].initialized == 0) {
         quad_tree_insert(index, 0, 1);
         entities[index].initialized = 1;
+        quadTreeEntities[index].tick = 0;
         return;
     }
 
-    // update_direction(index, entities[index].pos);
-    // vec2 newPos = move(index);
-    // quad_tree_update(index, newPos);
+    quadTreeEntities[index].tick += 1;
 
-    entities[index].color = vec4(0, 1, 0, 1);
-    quad_tree_check_collisions(index);
+    if((quadTreeEntities[index].tick % 2) == 0) {
+        update_direction(index, entities[index].pos);
+        vec2 newPos = move(index);
+        quad_tree_update(index, newPos);
+    }
+    else {
+        entities[index].color = vec4(0, 1, 0, 1);
+        quad_tree_check_collisions(index);
+    }
 }

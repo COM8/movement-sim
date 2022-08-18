@@ -50,7 +50,7 @@ void Simulator::init() {
     tensorConnections = mgr->tensor(map->connections.data(), map->connections.size(), sizeof(unsigned int), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
     // Quad Tree:
-    static_assert(sizeof(gpu_quad_tree::Entity) == sizeof(uint32_t) * 5, "Quad Tree entity size does not match. Expected to be constructed out of 5 uint32_t.");
+    static_assert(sizeof(gpu_quad_tree::Entity) == sizeof(uint32_t) * 6, "Quad Tree entity size does not match. Expected to be constructed out of 5 uint32_t.");
     quadTreeEntities.resize(MAX_ENTITIES);
     tensorQuadTreeEntities = mgr->tensor(quadTreeEntities.data(), quadTreeEntities.size(), sizeof(gpu_quad_tree::Entity), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
@@ -76,13 +76,13 @@ void Simulator::init() {
     params = {tensorEntities, tensorConnections, tensorRoads, tensorQuadTreeLevels, tensorQuadTreeEntities, tensorQuadTreeLevelUsedStatus, tensorDebugData};
 
     // Push constants:
-    PushConsts pushConsts{};
     pushConsts.worldSizeX = map->width;
     pushConsts.worldSizeY = map->height;
     pushConsts.levelCount = static_cast<uint32_t>(quadTreeLevels->size());
     pushConsts.maxDepth = QUAD_TREE_MAX_DEPTH;
     pushConsts.entityLevelCap = QUAD_TREE_ENTITY_LEVEL_CAP;
     pushConsts.collisionRadius = COLLISION_RADIUS;
+    pushConsts.tick = 1;
 
     algo = mgr->algorithm<float, PushConsts>(params, shader, {}, {}, {pushConsts});
 
@@ -196,6 +196,10 @@ void Simulator::sim_worker() {
 
 void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveEntitiesSeq, std::shared_ptr<kp::Sequence>& retrieveQuadTreeLevelsSeq, std::shared_ptr<kp::Sequence>& retrieveMiscSeq) {
     std::chrono::high_resolution_clock::time_point tickStart = std::chrono::high_resolution_clock::now();
+
+    pushConsts.tick++;
+    // TODO: Update push constants on the GPU
+    // algo->setPushConstants<PushConsts>({pushConsts});
 
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
     start_frame_capture();
