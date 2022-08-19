@@ -547,6 +547,19 @@ void quad_tree_collision(uint index0, uint index1) {
     atomicAdd(debugData[1], 1);
 }
 
+bool quad_tree_in_range(vec2 v1, vec2 v2, float maxDistance) {
+    float dx = abs(v2.x - v1.x);
+    if (dx > maxDistance) {
+        return false;
+    }
+
+    float dy = abs(v2.y - v1.y);
+    if (dy > maxDistance) {
+        return false;
+    }
+    return distance(v1, v2) < maxDistance;
+}
+
 void quad_tree_check_entity_collisions_on_level(uint index, uint levelIndex) {
     if (quadTreeLevels[levelIndex].entityCount <= 0) {
         return;
@@ -557,7 +570,7 @@ void quad_tree_check_entity_collisions_on_level(uint index, uint levelIndex) {
     uint curEntityIndex = quadTreeLevels[levelIndex].first;
     while (true) {
         // Prevent checking collision with our self and prevent duplicate entries by checking only for ones where the ID is smaller than ours:
-        if (curEntityIndex < index && distance(entities[curEntityIndex].pos, ePos) <= pushConsts.collisionRadius) {
+        if (curEntityIndex < index && quad_tree_in_range(entities[curEntityIndex].pos, ePos, pushConsts.collisionRadius)) {
             quad_tree_collision(index, curEntityIndex);
         }
 
@@ -629,6 +642,19 @@ void quad_tree_check_collisions_on_level(uint index, uint levelIndex) {
                     break;
                 }
             }
+        } else if (!quad_tree_collision_on_level(index, curLevelIndex)) {
+            curLevelIndex = quad_tree_get_next_level_index(curLevelIndex);
+            while (true) {
+                if (curLevelIndex == 0) {
+                    if (quadTreeLevels[sourceLevelIndex].prevLevelIndex == sourceLevelIndex) {
+                        return;
+                    }
+                    curLevelIndex = quad_tree_get_next_level_index(sourceLevelIndex);
+                    sourceLevelIndex = quadTreeLevels[sourceLevelIndex].prevLevelIndex;
+                } else {
+                    break;
+                }
+            }
         } else {
             sourceLevelIndex = curLevelIndex;
             curLevelIndex = quadTreeLevels[curLevelIndex].nextTL;
@@ -642,10 +668,11 @@ bool quad_tree_collisions_only_on_same_level(uint index, uint levelIndex) {
 
     vec2 ePos = entities[index].pos;
     vec2 minEPos = ePos - vec2(pushConsts.collisionRadius);
+    minEPos = vec2(max(minEPos.x, 0.0F), max(minEPos.y, 0.0F));
     vec2 maxEPos = ePos + vec2(pushConsts.collisionRadius);
+    maxEPos = vec2(min(maxEPos.x, pushConsts.worldSizeX), min(maxEPos.y, pushConsts.worldSizeY));
 
-    return (minEPos.x >= levelOffsetX) && (maxEPos.x < quadTreeLevels[levelIndex].width)
-        && (minEPos.y >= levelOffsetY) && (maxEPos.y < quadTreeLevels[levelIndex].height);
+    return (minEPos.x >= levelOffsetX) && (maxEPos.x < quadTreeLevels[levelIndex].width) && (minEPos.y >= levelOffsetY) && (maxEPos.y < quadTreeLevels[levelIndex].height);
 }
 
 /**
