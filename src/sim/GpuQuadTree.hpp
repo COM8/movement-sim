@@ -59,8 +59,6 @@ struct Entity {
      **/
     NextType typePrev{NextType::INVALID};
     uint32_t prev{0};
-
-    uint32_t tick{0};
 } __attribute__((packed)) __attribute__((aligned(4)));
 
 void init_level_zero(Level& level, float worldSizeX, float worldSizeY);

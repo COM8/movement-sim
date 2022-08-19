@@ -55,12 +55,15 @@ class Simulator {
     utils::TickDurationHistory tpsHistory{};
     utils::TickRate tps{};
 
+    utils::TickDurationHistory updateTickHistory{};
+    utils::TickDurationHistory collisionDetectionTickHistory{};
+
     std::shared_ptr<kp::Manager> mgr{nullptr};
     std::vector<uint32_t> shader{};
     std::shared_ptr<kp::Algorithm> algo{nullptr};
     std::vector<std::shared_ptr<kp::Tensor>> params{};
 
-    PushConsts pushConsts{};
+    std::vector<PushConsts> pushConsts{};
 
     std::shared_ptr<std::vector<Entity>> entities{std::make_shared<std::vector<Entity>>()};
     std::shared_ptr<kp::Tensor> tensorEntities{nullptr};
@@ -105,6 +108,8 @@ class Simulator {
     [[nodiscard]] bool is_simulating() const;
     [[nodiscard]] const utils::TickRate& get_tps() const;
     [[nodiscard]] const utils::TickDurationHistory& get_tps_history() const;
+    [[nodiscard]] const utils::TickDurationHistory& get_update_tick_history() const;
+    [[nodiscard]] const utils::TickDurationHistory& get_collision_detection_tick_history() const;
     std::shared_ptr<std::vector<Entity>> get_entities();
     std::shared_ptr<std::vector<gpu_quad_tree::Level>> get_quad_tree_levels();
     [[nodiscard]] const std::shared_ptr<Map> get_map() const;

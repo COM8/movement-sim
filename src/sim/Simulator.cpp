@@ -50,7 +50,7 @@ void Simulator::init() {
     tensorConnections = mgr->tensor(map->connections.data(), map->connections.size(), sizeof(unsigned int), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
     // Quad Tree:
-    static_assert(sizeof(gpu_quad_tree::Entity) == sizeof(uint32_t) * 6, "Quad Tree entity size does not match. Expected to be constructed out of 5 uint32_t.");
+    static_assert(sizeof(gpu_quad_tree::Entity) == sizeof(uint32_t) * 5, "Quad Tree entity size does not match. Expected to be constructed out of 5 uint32_t.");
     quadTreeEntities.resize(MAX_ENTITIES);
     tensorQuadTreeEntities = mgr->tensor(quadTreeEntities.data(), quadTreeEntities.size(), sizeof(gpu_quad_tree::Entity), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
@@ -76,13 +76,14 @@ void Simulator::init() {
     params = {tensorEntities, tensorConnections, tensorRoads, tensorQuadTreeLevels, tensorQuadTreeEntities, tensorQuadTreeLevelUsedStatus, tensorDebugData};
 
     // Push constants:
-    pushConsts.worldSizeX = map->width;
-    pushConsts.worldSizeY = map->height;
-    pushConsts.levelCount = static_cast<uint32_t>(quadTreeLevels->size());
-    pushConsts.maxDepth = QUAD_TREE_MAX_DEPTH;
-    pushConsts.entityLevelCap = QUAD_TREE_ENTITY_LEVEL_CAP;
-    pushConsts.collisionRadius = COLLISION_RADIUS;
-    pushConsts.tick = 1;
+    pushConsts.emplace_back();
+    pushConsts[0].worldSizeX = map->width;
+    pushConsts[0].worldSizeY = map->height;
+    pushConsts[0].levelCount = static_cast<uint32_t>(quadTreeLevels->size());
+    pushConsts[0].maxDepth = QUAD_TREE_MAX_DEPTH;
+    pushConsts[0].entityLevelCap = QUAD_TREE_ENTITY_LEVEL_CAP;
+    pushConsts[0].collisionRadius = COLLISION_RADIUS;
+    pushConsts[0].tick = 1;
 
     algo = mgr->algorithm<float, PushConsts>(params, shader, {}, {}, {pushConsts});
 
@@ -197,14 +198,21 @@ void Simulator::sim_worker() {
 void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveEntitiesSeq, std::shared_ptr<kp::Sequence>& retrieveQuadTreeLevelsSeq, std::shared_ptr<kp::Sequence>& retrieveMiscSeq) {
     std::chrono::high_resolution_clock::time_point tickStart = std::chrono::high_resolution_clock::now();
 
-    pushConsts.tick++;
-    // TODO: Update push constants on the GPU
-    // algo->setPushConstants<PushConsts>({pushConsts});
-
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
     start_frame_capture();
 #endif
-    calcSeq->eval();
+    // Update quad tree and move:
+    pushConsts[0].tick++;
+    std::chrono::high_resolution_clock::time_point updateTickStart = std::chrono::high_resolution_clock::now();
+    calcSeq->eval<kp::OpAlgoDispatch>(algo, pushConsts);
+    updateTickHistory.add_time(std::chrono::high_resolution_clock::now() - updateTickStart);
+
+    // Update collision detection:
+    pushConsts[0].tick++;
+    std::chrono::high_resolution_clock::time_point collisionDetectionTickStart = std::chrono::high_resolution_clock::now();
+    calcSeq->eval<kp::OpAlgoDispatch>(algo, pushConsts);
+    collisionDetectionTickHistory.add_time(std::chrono::high_resolution_clock::now() - collisionDetectionTickStart);
+
     // std::this_thread::sleep_for(std::chrono::milliseconds(100));
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
     end_frame_capture();
@@ -253,8 +261,7 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
     quadTreeEntities = tensorQuadTreeEntities->vector<gpu_quad_tree::Entity>();
     std::vector<uint32_t> debugData = tensorDebugData->vector<uint32_t>();
 
-    std::chrono::high_resolution_clock::time_point tickEnd = std::chrono::high_resolution_clock::now();
-    tpsHistory.add_time(tickEnd - tickStart);
+    tpsHistory.add_time(std::chrono::high_resolution_clock::now() - tickStart);
 
     // TPS counter:
     tps.tick();
@@ -286,6 +293,14 @@ const utils::TickRate& Simulator::get_tps() const {
 
 const utils::TickDurationHistory& Simulator::get_tps_history() const {
     return tpsHistory;
+}
+
+const utils::TickDurationHistory& Simulator::get_update_tick_history() const {
+    return updateTickHistory;
+}
+
+const utils::TickDurationHistory& Simulator::get_collision_detection_tick_history() const {
+    return collisionDetectionTickHistory;
 }
 
 void Simulator::check_device_queues() {
