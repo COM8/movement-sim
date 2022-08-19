@@ -721,9 +721,12 @@ void quad_tree_collision(uint index0, uint index1) {
 
 bool quad_tree_in_range(const vec2& v1, const vec2& v2, float maxDistance) {
     float dx = std::abs(v2.x - v1.x);
-    float dy = std::abs(v2.y - v1.y);
+    if (dx > maxDistance) {
+        return false;
+    }
 
-    if (dx > maxDistance || dy > maxDistance) {
+    float dy = std::abs(v2.y - v1.y);
+    if (dy > maxDistance) {
         return false;
     }
     return distance(v1, v2) < maxDistance;
@@ -811,6 +814,19 @@ void quad_tree_check_collisions_on_level(uint index, uint levelIndex) {
                     break;
                 }
             }
+        } else if (!quad_tree_collision_on_level(index, curLevelIndex)) {
+            curLevelIndex = quad_tree_get_next_level_index(curLevelIndex);
+            while (true) {
+                if (curLevelIndex == 0) {
+                    if (quadTreeLevels[sourceLevelIndex].prevLevelIndex == sourceLevelIndex) {
+                        return;
+                    }
+                    curLevelIndex = quad_tree_get_next_level_index(sourceLevelIndex);
+                    sourceLevelIndex = quadTreeLevels[sourceLevelIndex].prevLevelIndex;
+                } else {
+                    break;
+                }
+            }
         } else {
             sourceLevelIndex = curLevelIndex;
             curLevelIndex = quadTreeLevels[curLevelIndex].nextTL;
@@ -824,7 +840,9 @@ bool quad_tree_collisions_only_on_same_level(uint index, uint levelIndex) {
 
     vec2 ePos = entities[index].pos;
     vec2 minEPos = ePos - vec2(pushConsts.collisionRadius);
+    minEPos = vec2(std::max(minEPos.x, 0.0F), std::max(minEPos.y, 0.0F));
     vec2 maxEPos = ePos + vec2(pushConsts.collisionRadius);
+    maxEPos = vec2(std::min(maxEPos.x, pushConsts.worldSizeX), std::min(maxEPos.y, pushConsts.worldSizeY));
 
     return (minEPos.x >= levelOffsetX) && (maxEPos.x < quadTreeLevels[levelIndex].width) && (minEPos.y >= levelOffsetY) && (maxEPos.y < quadTreeLevels[levelIndex].height);
 }
@@ -1064,6 +1082,7 @@ void run_collision_detection_test_1() {
     assert(debugData[1] == 0);
     quad_tree_check_collisions(1);
     assert(debugData[1] == 1);
+    std::cout << to_dot_graph() << '\n';
     quad_tree_check_collisions(2);
     assert(debugData[1] == 1);
     quad_tree_check_collisions(3);
@@ -1080,8 +1099,8 @@ void run_tests() {
 }
 
 int main() {
-    // run_tests();
-    run_default();
+    run_tests();
+    // run_default();
 
     return EXIT_SUCCESS;
 }
