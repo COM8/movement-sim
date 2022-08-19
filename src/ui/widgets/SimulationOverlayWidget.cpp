@@ -55,12 +55,14 @@ void SimulationOverlayWidget::on_draw_handler(const Cairo::RefPtr<Cairo::Context
 
     double tps = simulator->get_tps().get_ticks();
     std::string tpsTime = simulator->get_tps_history().get_avg_time_str();
+    std::string updateTickTime = simulator->get_update_tick_history().get_avg_time_str();
+    std::string collisionDetectionTickTime = simulator->get_collision_detection_tick_history().get_avg_time_str();
 
     double fps = simWidget->get_fps().get_ticks();
     std::string fpsTime = simWidget->get_fps_history().get_avg_time_str();
 
     std::locale local("en_US.UTF-8");
-    std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {}\n", tps, tpsTime, sim::MAX_ENTITIES);
+    std::string stats = fmt::format("TPS: {:.2f}\nTick Time: {} (Update: {}, Collision: {})\n", tps, tpsTime, updateTickTime, collisionDetectionTickTime);
     stats += fmt::format("FPS: {:.2f}\nFrame Time: {}\n", fps, fpsTime);
     stats += fmt::format(local, "Entities: {:L}\n", sim::MAX_ENTITIES);
     stats += fmt::format("Zoom: {}\n", simWidget->get_zoom_factor());

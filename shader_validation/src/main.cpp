@@ -90,15 +90,15 @@ T atomicExchange(std::atomic<T>& data, T val) {
     return data.exchange(val);
 }
 
-float distance(vec2 v1, vec2 v2) {
+float distance(const vec2& v1, const vec2& v2) {
     return static_cast<float>(std::sqrt(std::pow(v2.x - v1.x, 2) + std::pow(v2.y - v1.y, 2)));
 }
 
-float length(vec2 v1) {
+float length(const vec2& v1) {
     return static_cast<float>(std::sqrt(std::pow(v1.x, 2) + std::pow(v1.y, 2)));
 }
 
-vec2 clamp(vec2 v, vec2 minVec, vec2 maxVec) {
+vec2 clamp(const vec2& v, const vec2& minVec, const vec2& maxVec) {
     return {std::max(minVec.x, std::min(maxVec.x, v.x)), std::max(minVec.y, std::min(maxVec.y, v.y))};
 }
 
@@ -124,7 +124,7 @@ struct PushConstantsDescriptor {
 
 const size_t MAX_DEPTH = 8;
 const size_t NUM_LEVELS = 21845;
-const size_t NUM_ENTITIES = 1000000;
+const size_t NUM_ENTITIES = 10000;
 const float COLLISION_RADIUS = 10;
 
 static std::array<EntityDescriptor, NUM_ENTITIES> entities{};
@@ -200,6 +200,8 @@ struct QuadTreeEntityDescriptor {
 
     uint typePrev{0};
     uint prev{0};
+
+    uint tick{0};
 } __attribute__((aligned(32)));
 
 // TODO add memory qualifiers: https://www.khronos.org/opengl/wiki/Shader_Storage_Buffer_Object
@@ -717,6 +719,16 @@ void quad_tree_collision(uint index0, uint index1) {
     atomicAdd(debugData[1], static_cast<uint>(1));
 }
 
+bool quad_tree_in_range(const vec2& v1, const vec2& v2, float maxDistance) {
+    float dx = std::abs(v2.x - v1.x);
+    float dy = std::abs(v2.y - v1.y);
+
+    if (dx > maxDistance || dy > maxDistance) {
+        return false;
+    }
+    return distance(v1, v2) < maxDistance;
+}
+
 void quad_tree_check_entity_collisions_on_level(uint index, uint levelIndex) {
     if (quadTreeLevels[levelIndex].entityCount <= 0) {
         return;
@@ -727,7 +739,7 @@ void quad_tree_check_entity_collisions_on_level(uint index, uint levelIndex) {
     uint curEntityIndex = quadTreeLevels[levelIndex].first;
     while (true) {
         // Prevent checking collision with our self and prevent duplicate entries by checking only for ones where the ID is smaller than ours:
-        if (curEntityIndex < index && distance(entities[curEntityIndex].pos, ePos) <= pushConsts.collisionRadius) {
+        if (curEntityIndex < index && quad_tree_in_range(entities[curEntityIndex].pos, ePos, pushConsts.collisionRadius)) {
             quad_tree_collision(index, curEntityIndex);
         }
 
@@ -872,12 +884,19 @@ void shader_main(uint index) {
     if (entities[index].initialized == 0) {
         quad_tree_insert(index, 0, 1);
         entities[index].initialized = 1;
-        // std::cout << "Inserted: " << index << '\n';
+        quadTreeEntities[index].tick = 0;
         return;
     }
 
-    vec2 newPos = move(index);
-    quad_tree_update(index, newPos);
+    quadTreeEntities[index].tick += 1;
+
+    if ((quadTreeEntities[index].tick % 2) == 0) {
+        vec2 newPos = move(index);
+        quad_tree_update(index, newPos);
+    } else {
+        entities[index].color = vec4(0, 1, 0, 1);
+        quad_tree_check_collisions(index);
+    }
 }
 
 void reset() {
@@ -1062,8 +1081,8 @@ void run_tests() {
 }
 
 int main() {
-    run_tests();
-    // run_default();
+    // run_tests();
+    run_default();
 
     return EXIT_SUCCESS;
 }
