@@ -370,9 +370,9 @@ void quad_tree_insert(uint index, uint startLevelIndex, uint startLevelDepth) {
     quad_tree_unlock_levels_read(levelIndex);
 }
 
-bool quad_tree_is_entity_on_level(uint index, uint levelIndex) {
-    return entities[index].pos.x >= quadTreeLevels[levelIndex].offsetX && entities[index].pos.x < (quadTreeLevels[levelIndex].offsetX + quadTreeLevels[levelIndex].width)
-        && entities[index].pos.y >= quadTreeLevels[levelIndex].offsetY && entities[index].pos.y < (quadTreeLevels[levelIndex].offsetY + quadTreeLevels[levelIndex].height);
+bool quad_tree_is_entity_on_level(uint levelIndex, vec2 ePos) {
+    return ePos.x >= quadTreeLevels[levelIndex].offsetX && ePos.x < (quadTreeLevels[levelIndex].offsetX + quadTreeLevels[levelIndex].width)
+        && ePos.y >= quadTreeLevels[levelIndex].offsetY && ePos.y < (quadTreeLevels[levelIndex].offsetY + quadTreeLevels[levelIndex].height);
 }
 
 /**
@@ -495,7 +495,7 @@ void quad_tree_update(uint index, vec2 newPos) {
     }
 
     // Still on the same level, so we do not need to do anything:
-    if (quad_tree_is_entity_on_level(index, quadTreeEntities[index].levelIndex)) {
+    if (quad_tree_is_entity_on_level(quadTreeEntities[index].levelIndex, newPos)) {
         entities[index].pos = newPos;
         quad_tree_unlock_level_read(quadTreeEntities[index].levelIndex);
         return;
@@ -526,7 +526,7 @@ void quad_tree_update(uint index, vec2 newPos) {
     entities[index].pos = newPos;
 
     // Move up until we reach a level where our entity is on:
-    while (!quad_tree_is_entity_on_level(index, levelIndex)) {
+    while (!quad_tree_is_entity_on_level(levelIndex, entities[index].pos)) {
         uint oldLevelIndex = levelIndex;
         levelIndex = quadTreeLevels[levelIndex].prevLevelIndex;
         quad_tree_unlock_level_read(oldLevelIndex);
@@ -618,7 +618,9 @@ bool quad_tree_collision_on_level(uint index, uint levelIndex) {
 
 void quad_tree_check_collisions_on_level(uint index, uint levelIndex) {
     if (quadTreeLevels[levelIndex].contentType == TYPE_ENTITY) {
-        quad_tree_check_entity_collisions_on_level(index, levelIndex);
+        if (quadTreeEntities[index].levelIndex != levelIndex || quadTreeLevels[levelIndex].entityCount > 1) {
+            quad_tree_check_entity_collisions_on_level(index, levelIndex);
+        }
         return;
     }
 
