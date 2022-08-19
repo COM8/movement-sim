@@ -120,6 +120,8 @@ struct PushConstantsDescriptor {
     uint maxDepth{0};
 
     float collisionRadius{0};
+
+    uint tick{0};
 } __attribute__((aligned(32)));
 
 const size_t MAX_DEPTH = 8;
@@ -200,8 +202,6 @@ struct QuadTreeEntityDescriptor {
 
     uint typePrev{0};
     uint prev{0};
-
-    uint tick{0};
 } __attribute__((aligned(32)));
 
 // TODO add memory qualifiers: https://www.khronos.org/opengl/wiki/Shader_Storage_Buffer_Object
@@ -884,13 +884,10 @@ void shader_main(uint index) {
     if (entities[index].initialized == 0) {
         quad_tree_insert(index, 0, 1);
         entities[index].initialized = 1;
-        quadTreeEntities[index].tick = 0;
         return;
     }
 
-    quadTreeEntities[index].tick += 1;
-
-    if ((quadTreeEntities[index].tick % 2) == 0) {
+    if ((pushConsts.tick % 2) == 0) {
         vec2 newPos = move(index);
         quad_tree_update(index, newPos);
     } else {
@@ -915,6 +912,8 @@ void reset() {
     for (std::atomic<uint>& i : debugData) {
         i = 0;
     }
+
+    pushConsts.tick = 0;
 }
 
 void init() {
@@ -977,7 +976,7 @@ std::string to_dot_graph() {
 
 void run_default() {
     init();
-    std::atomic<size_t> tick = 0;
+    pushConsts.tick = 0;
     std::vector<std::thread> threads;
 
     const size_t THREAD_COUNT = 10;
@@ -986,7 +985,7 @@ void run_default() {
     for (size_t i = 0; i < THREAD_COUNT; i++) {
         size_t start = (entities.size() / THREAD_COUNT) * i;
         size_t end = (entities.size() / THREAD_COUNT) * (i + 1);
-        threads.emplace_back([start, end, i, &tick, &syncPoint, &incSyncPoint]() {
+        threads.emplace_back([start, end, i, &syncPoint, &incSyncPoint]() {
             while (true) {
                 for (size_t index = start; index < end; index++) {
                     shader_main(index);
@@ -1001,7 +1000,7 @@ void run_default() {
                 syncPoint.arrive_and_wait();
                 if (i == 0) {
                     validate_entity_count(NUM_ENTITIES);
-                    std::cout << "Shader ticked: " << tick++ << '\n';
+                    std::cout << "Shader ticked: " << pushConsts.tick++ << '\n';
                 }
                 incSyncPoint.arrive_and_wait();
             }
