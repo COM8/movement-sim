@@ -203,15 +203,23 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
 #endif
     // Update quad tree and move:
     pushConsts[0].tick++;
+    uint32_t tick = pushConsts[0].tick;
+    SPDLOG_DEBUG("Update tick {} started.", tick);
     std::chrono::high_resolution_clock::time_point updateTickStart = std::chrono::high_resolution_clock::now();
     calcSeq->eval<kp::OpAlgoDispatch>(algo, pushConsts);
     updateTickHistory.add_time(std::chrono::high_resolution_clock::now() - updateTickStart);
+    tick = pushConsts[0].tick;
+    SPDLOG_DEBUG("Update tick {} ended.", tick);
 
     // Update collision detection:
     pushConsts[0].tick++;
+    tick = pushConsts[0].tick;
+    SPDLOG_DEBUG("Collision detection tick {} started.", tick);
     std::chrono::high_resolution_clock::time_point collisionDetectionTickStart = std::chrono::high_resolution_clock::now();
     calcSeq->eval<kp::OpAlgoDispatch>(algo, pushConsts);
     collisionDetectionTickHistory.add_time(std::chrono::high_resolution_clock::now() - collisionDetectionTickStart);
+    tick = pushConsts[0].tick;
+    SPDLOG_DEBUG("Collision detection tick {} ended.", tick);
 
     // std::this_thread::sleep_for(std::chrono::milliseconds(100));
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API

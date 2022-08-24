@@ -86,16 +86,16 @@ struct QuadTreeEntityDescriptor {
 };
 
 // TODO add memory qualifiers: https://www.khronos.org/opengl/wiki/Shader_Storage_Buffer_Object
-layout(set = 0, binding = 3, std430) buffer bufQuadTreeLevels { QuadTreeLevelDescriptor quadTreeLevels[]; };
-layout(set = 0, binding = 4, std430) buffer bufQuadTreeEntities { QuadTreeEntityDescriptor quadTreeEntities[]; };
+layout(set = 0, binding = 3, std430) buffer coherent bufQuadTreeLevels { QuadTreeLevelDescriptor quadTreeLevels[]; };
+layout(set = 0, binding = 4, std430) buffer coherent bufQuadTreeEntities { QuadTreeEntityDescriptor quadTreeEntities[]; };
 /**
  * [0]: Lock
  * [1]: Next free hint
  * [2... (levelCount + 2)]: Level locks
  **/
-layout(set = 0, binding = 5, std430) buffer bufQuadTreeLevelStatus { uint quadTreeLevelUsedStatus[]; };
+layout(set = 0, binding = 5, std430) buffer coherent bufQuadTreeLevelStatus { uint quadTreeLevelUsedStatus[]; };
 
-layout(set = 0, binding = 6, std430) buffer bufDebugData { uint debugData[]; };
+layout(set = 0, binding = 6, std430) buffer coherent bufDebugData { uint debugData[]; };
 
 void quad_tree_lock_level_read(uint levelIndex) {
     while(atomicCompSwap(quadTreeLevels[levelIndex].acquireLock, 0, 1) != 0) {}
@@ -419,6 +419,7 @@ uint quad_tree_lock_for_entity_edit(uint index) {
                 return levelIndex;
             }
         }
+        memoryBarrierBuffer();
     }
 }
 
@@ -850,16 +851,6 @@ vec2 move(uint index) {
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
-
-    // while(atomicCompSwap(debugData[5], 0, 1) != 0) {}
-    // memoryBarrierBuffer();
-    // atomicExchange(debugData[5], 0);
-    // memoryBarrierBuffer();
-    // return;
-    
-    // if(index > 12500) {
-    //     return;
-    // }
 
     if(entities[index].initialized == 0) {
         quad_tree_insert(index, 0, 1);
