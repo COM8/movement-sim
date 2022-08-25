@@ -15,17 +15,31 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <kompute/operations/OpTensorSyncDevice.hpp>
 #include <kompute/operations/OpTensorSyncLocal.hpp>
 #include <memory>
+#include <string>
 #include <thread>
 #include <vector>
+#include <bits/chrono.h>
 
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
 #include <renderdoc_app.h>
 #endif
 
 namespace sim {
+Simulator::Simulator() {
+    prepare_log_csv_file();
+}
+
+Simulator::~Simulator() {
+    assert(logFile);
+    logFile->close();
+    logFile = nullptr;
+}
+
 void Simulator::init() {
     assert(!initialized);
 
@@ -207,7 +221,9 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
     SPDLOG_DEBUG("Update tick {} started.", tick);
     std::chrono::high_resolution_clock::time_point updateTickStart = std::chrono::high_resolution_clock::now();
     calcSeq->eval<kp::OpAlgoDispatch>(algo, pushConsts);
-    updateTickHistory.add_time(std::chrono::high_resolution_clock::now() - updateTickStart);
+    std::chrono::nanoseconds durationUpdate = std::chrono::high_resolution_clock::now() - updateTickStart;
+    updateTickHistory.add_time(durationUpdate);
+    write_log_csv_file(tick, 0, durationUpdate);
     tick = pushConsts[0].tick;
     SPDLOG_DEBUG("Update tick {} ended.", tick);
 
@@ -217,7 +233,9 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
     SPDLOG_DEBUG("Collision detection tick {} started.", tick);
     std::chrono::high_resolution_clock::time_point collisionDetectionTickStart = std::chrono::high_resolution_clock::now();
     calcSeq->eval<kp::OpAlgoDispatch>(algo, pushConsts);
-    collisionDetectionTickHistory.add_time(std::chrono::high_resolution_clock::now() - collisionDetectionTickStart);
+    std::chrono::nanoseconds durationCollisionDetection = std::chrono::high_resolution_clock::now() - collisionDetectionTickStart;
+    collisionDetectionTickHistory.add_time(durationCollisionDetection);
+    write_log_csv_file(tick, 1, durationCollisionDetection);
     tick = pushConsts[0].tick;
     SPDLOG_DEBUG("Collision detection tick {} ended.", tick);
 
@@ -329,6 +347,64 @@ void Simulator::check_device_queues() {
         }
         SPDLOG_INFO("{}", devInfo);
     }
+}
+
+const std::filesystem::path& Simulator::get_log_csv_path() {
+    static const std::filesystem::path LOG_CSV_PATH{"simulator_logs.csv"};
+    return LOG_CSV_PATH;
+}
+
+void Simulator::prepare_log_csv_file() {
+    assert(!logFile);
+    logFile = std::make_unique<std::ofstream>(Simulator::get_log_csv_path(), std::ios::out);
+    assert(logFile->is_open());
+    assert(logFile->good());
+}
+
+std::string Simulator::get_time_stamp() {
+    std::chrono::system_clock::time_point tp = std::chrono::system_clock::now();
+    std::chrono::days d = std::chrono::duration_cast<std::chrono::days>(tp.time_since_epoch());
+    tp -= d;
+    std::chrono::hours h = std::chrono::duration_cast<std::chrono::hours>(tp.time_since_epoch());
+    tp -= h;
+    std::chrono::minutes m = std::chrono::duration_cast<std::chrono::minutes>(tp.time_since_epoch());
+    tp -= m;
+    std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds>(tp.time_since_epoch());
+    tp -= s;
+    std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
+    tp -= ms;
+
+    std::string msStr = std::to_string(ms.count());
+    while (msStr.size() < 3) {
+        // NOLINTNEXTLINE (performance-inefficient-string-concatenation)
+        msStr = "0" + msStr;
+    }
+
+    std::string secStr = std::to_string(s.count());
+    while (secStr.size() < 2) {
+        // NOLINTNEXTLINE (performance-inefficient-string-concatenation)
+        secStr = "0" + secStr;
+    }
+
+    std::string minStr = std::to_string(m.count());
+    while (msStr.size() < 2) {
+        // NOLINTNEXTLINE (performance-inefficient-string-concatenation)
+        minStr = "0" + minStr;
+    }
+
+    std::string hourStr = std::to_string(h.count());
+    while (hourStr.size() < 2) {
+        // NOLINTNEXTLINE (performance-inefficient-string-concatenation)
+        hourStr = "0" + hourStr;
+    }
+
+    return hourStr + ":" + minStr + ":" + secStr + "." + msStr;
+}
+
+void Simulator::write_log_csv_file(uint32_t tick, uint32_t type, std::chrono::nanoseconds duration) {
+    assert(logFile);
+    (*logFile) << Simulator::get_time_stamp() << ";" << std::to_string(tick) << ";" << std::to_string(type) << ";" << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "\n";
+    logFile->flush();
 }
 
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API

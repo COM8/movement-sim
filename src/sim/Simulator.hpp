@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <kompute/Manager.hpp>
 #include <memory>
 #include <mutex>
@@ -44,6 +45,7 @@ constexpr float COLLISION_RADIUS = 10;
 class Simulator {
  private:
     bool initialized{false};
+    std::unique_ptr<std::ofstream> logFile{nullptr};
 
     std::unique_ptr<std::thread> simThread{nullptr};
     SimulatorState state{SimulatorState::STOPPED};
@@ -88,8 +90,8 @@ class Simulator {
 #endif
 
  public:
-    Simulator() = default;
-    ~Simulator() = default;
+    Simulator();
+    ~Simulator();
 
     Simulator(Simulator&&) = delete;
     Simulator(const Simulator&) = delete;
@@ -121,9 +123,14 @@ class Simulator {
     void sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveEntitiesSeq, std::shared_ptr<kp::Sequence>& retrieveQuadTreeLevelsSeq, std::shared_ptr<kp::Sequence>& retrieveMiscSeq);
     void add_entities();
     void check_device_queues();
+    static const std::filesystem::path& get_log_csv_path();
+    void prepare_log_csv_file();
+    void write_log_csv_file(uint32_t tick, uint32_t type, std::chrono::nanoseconds duration);
+    static std::string get_time_stamp();
 
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
-    void init_renderdoc();
+    void
+    init_renderdoc();
     void start_frame_capture();
     void end_frame_capture();
 #endif
