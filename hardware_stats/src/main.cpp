@@ -14,6 +14,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 #include <bits/chrono.h>
 #include <fcntl.h>
@@ -87,33 +88,30 @@ int read_int(const std::filesystem::path& path) {
 
 std::vector<CPUInfo> get_cpu_info() {
     const std::filesystem::path CPU_BASE_PATH{"/sys/devices/system/cpu"};
-    const std::regex CORE_DIR_NAME_REGEX{"^cpu[0-9]+$"};
+    const std::regex CORE_DIR_NAME_REGEX{"^cpu([0-9]+)$"};
 
-    std::vector<std::filesystem::path> corePaths{};
+    std::vector<std::pair<int, std::filesystem::path>> corePaths{};
     std::ranges::for_each(std::filesystem::directory_iterator{CPU_BASE_PATH},
                           [&CORE_DIR_NAME_REGEX, &corePaths](const std::filesystem::path& entry) {
                               if (std::filesystem::is_directory(entry)) {
                                   std::cmatch m;
                                   if (std::regex_match(entry.filename().c_str(), m, CORE_DIR_NAME_REGEX)) {
-                                      corePaths.emplace_back(entry);
+                                      corePaths.emplace_back(std::make_pair(std::stoi(m[1].str()), entry));
                                   }
                               }
                           });
 
     std::vector<CPUInfo> cpuInfo;
-    for (const std::filesystem::path& corePath : corePaths) {
-        const std::filesystem::path dieIdPath = corePath / "topology" / "die_id";
-        const std::filesystem::path coreIdPath = corePath / "topology" / "core_id";
+    for (const std::pair<int, std::filesystem::path>& corePath : corePaths) {
+        const std::filesystem::path dieIdPath = corePath.second / "topology" / "die_id";
 
-        int coreId = read_int(coreIdPath);
-        assert(coreId >= 0);
         int dieId = read_int(dieIdPath);
         assert(dieId >= 0);
 
         bool found = false;
         for (CPUInfo& info : cpuInfo) {
             if (info.dieId == dieId) {
-                info.coreIds.push_back(coreId);
+                info.coreIds.push_back(corePath.first);
                 found = true;
                 break;
             }
@@ -121,7 +119,7 @@ std::vector<CPUInfo> get_cpu_info() {
 
         if (!found) {
             CPUInfo info(dieId);
-            info.coreIds.push_back(coreId);
+            info.coreIds.push_back(corePath.first);
             cpuInfo.emplace_back(info);
         }
     }
@@ -215,7 +213,7 @@ std::string get_time_stamp() {
     return std::to_string(h.count()) + ":" + std::to_string(m.count()) + ":" + std::to_string(s.count()) + "." + std::to_string(ms.count());
 }
 
-void export_msr(const std::map<int, CPUMsrInfo>& msrInfo, const std::map<int, CPUUtilizationInfo>& utilizationInfo, const std::filesystem::path& outFilePath) {
+void export_data(const std::map<int, CPUMsrInfo>& msrInfo, const std::map<int, CPUUtilizationInfo>& utilizationInfo, const std::filesystem::path& outFilePath) {
     std::vector<double> packageAvg(msrInfo.size(), 0);
     std::vector<double> coreAvg(msrInfo.size(), 0);
     std::vector<double> sum(msrInfo.size(), 0);
@@ -345,7 +343,7 @@ int main() {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         update_msr_info(msrInfo);
         update_utilization_info(utilizationInfo);
-        export_msr(msrInfo, utilizationInfo, OUT_FILE_PATH);
+        export_data(msrInfo, utilizationInfo, OUT_FILE_PATH);
     }
 
     return EXIT_SUCCESS;
