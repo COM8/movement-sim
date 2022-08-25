@@ -210,7 +210,13 @@ std::string get_time_stamp() {
     std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
     tp -= ms;
 
-    return std::to_string(h.count()) + ":" + std::to_string(m.count()) + ":" + std::to_string(s.count()) + "." + std::to_string(ms.count());
+    std::string msStr = std::to_string(ms.count());
+    while (msStr.size() < 3) {
+        // NOLINTNEXTLINE (performance-inefficient-string-concatenation)
+        msStr = "0" + msStr;
+    }
+
+    return std::to_string(h.count()) + ":" + std::to_string(m.count()) + ":" + std::to_string(s.count()) + "." + msStr;
 }
 
 void export_data(const std::map<int, CPUMsrInfo>& msrInfo, const std::map<int, CPUUtilizationInfo>& utilizationInfo, const std::filesystem::path& outFilePath) {
@@ -235,7 +241,7 @@ void export_data(const std::map<int, CPUMsrInfo>& msrInfo, const std::map<int, C
             utilization[cpuUtilizationPair.first] += coreUtilizationPair.second.utilization;
         }
         utilization[cpuUtilizationPair.first] /= static_cast<double>(cpuUtilizationPair.second.coreUtilization.size());
-        utilization[cpuUtilizationPair.first] = std::min(utilization[cpuUtilizationPair.first], 100.0);  // Cap at 100%
+        utilization[cpuUtilizationPair.first] = std::min(std::max(0.0, utilization[cpuUtilizationPair.first]), 100.0);  // Cap at 100%
     }
 
     std::string result = get_time_stamp();
