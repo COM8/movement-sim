@@ -216,7 +216,25 @@ std::string get_time_stamp() {
         msStr = "0" + msStr;
     }
 
-    return std::to_string(h.count()) + ":" + std::to_string(m.count()) + ":" + std::to_string(s.count()) + "." + msStr;
+    std::string secStr = std::to_string(s.count());
+    while (secStr.size() < 2) {
+        // NOLINTNEXTLINE (performance-inefficient-string-concatenation)
+        secStr = "0" + secStr;
+    }
+
+    std::string minStr = std::to_string(m.count());
+    while (msStr.size() < 2) {
+        // NOLINTNEXTLINE (performance-inefficient-string-concatenation)
+        minStr = "0" + minStr;
+    }
+
+    std::string hourStr = std::to_string(h.count());
+    while (hourStr.size() < 2) {
+        // NOLINTNEXTLINE (performance-inefficient-string-concatenation)
+        hourStr = "0" + hourStr;
+    }
+
+    return hourStr + ":" + minStr + ":" + secStr + "." + msStr;
 }
 
 void export_data(const std::map<int, CPUMsrInfo>& msrInfo, const std::map<int, CPUUtilizationInfo>& utilizationInfo, const std::filesystem::path& outFilePath) {
@@ -333,7 +351,7 @@ void update_utilization_info(std::map<int, CPUUtilizationInfo>& utilizationInfo)
 }
 
 int main() {
-    const std::filesystem::path OUT_FILE_PATH{"data.txt"};
+    const std::filesystem::path OUT_FILE_PATH{"dataCpu.txt"};
     const std::vector<CPUInfo> cpuInfo = get_cpu_info();
 
     std::map<int, CPUUtilizationInfo> utilizationInfo;
