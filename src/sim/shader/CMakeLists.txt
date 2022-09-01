@@ -2,11 +2,13 @@ cmake_minimum_required(VERSION 3.20)
 
 vulkan_compile_shader(INFILE fall.comp
                       OUTFILE fall.hpp
-                      NAMESPACE "sim")
+                      NAMESPACE "sim"
+                      RELATIVE_PATH "${kompute_SOURCE_DIR}/cmake")
 
 vulkan_compile_shader(INFILE random_move.comp
                       OUTFILE random_move.hpp
-                      NAMESPACE "sim")
+                      NAMESPACE "sim"
+                      RELATIVE_PATH "${kompute_SOURCE_DIR}/cmake")
 
 add_library(sim_shader "${CMAKE_CURRENT_BINARY_DIR}/fall.hpp"
                        "${CMAKE_CURRENT_BINARY_DIR}/random_move.hpp")

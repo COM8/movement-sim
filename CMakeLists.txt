@@ -48,8 +48,6 @@ include(sanitizer)
 include(gcc_analyze)
 include(clear_variable)
 include(FetchContent)
-include(vulkan_shader_compiler)
-include(copy_shader_file)
 
 if(MOVEMENT_SIMULATOR_ENABLE_LINTING)
     message(STATUS "Enabling linting")
