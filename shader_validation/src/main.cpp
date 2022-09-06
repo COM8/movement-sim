@@ -59,6 +59,27 @@ struct vec2T {
         y += other.y;
         return *this;
     }
+
+    vec2T<T>& operator*=(const vec2T<T>& other) {
+        x *= other.x;
+        y *= other.y;
+        return *this;
+    }
+
+    vec2T<T> operator*(const vec2T<T>& other) {
+        return {x * other.x, y * other.y};
+    }
+
+    vec2T<T>& operator/=(const vec2T<T>& other) {
+        x /= other.x;
+        y /= other.y;
+        return *this;
+    }
+
+    vec2T<T> operator/(const vec2T<T>& other) {
+        return {x / other.x, y / other.y};
+    }
+
 } __attribute__((packed)) __attribute__((aligned(8)));
 
 using uint = uint32_t;
@@ -127,7 +148,7 @@ struct PushConstantsDescriptor {
 
 const size_t MAX_DEPTH = 8;
 const size_t NUM_LEVELS = 21845;
-const size_t NUM_ENTITIES = 5000;  // 246400;
+const size_t NUM_ENTITIES = 960;  // 246400;
 const float COLLISION_RADIUS = 10;
 
 static std::array<EntityDescriptor, NUM_ENTITIES> entities{};
@@ -249,7 +270,7 @@ size_t count_entities_rec(uint levelIndex) {
 void validate_entity_count(size_t expected) {
     size_t count = count_entities_rec(0);
     if (count != expected) {
-        // std::cout << to_dot_graph() << '\n';
+        std::cout << to_dot_graph() << '\n';
         std::cerr << "Count != Expected " << count << " != " << expected << '\n';
     }
     assert(count == expected);
@@ -899,13 +920,40 @@ void quad_tree_check_collisions(uint index) {
 
 // ------------------------------------------------------------------------------------
 
-vec2 move(uint /*index*/) {
+vec2 random_Target() {
     static std::random_device device;
     static std::mt19937 gen(device());
     static std::uniform_real_distribution<float> distr_x(0, pushConsts.worldSizeX);
     static std::uniform_real_distribution<float> distr_y(0, pushConsts.worldSizeY);
 
     return {distr_x(gen), distr_y(gen)};
+}
+
+// 1.4 meters per second:
+const float SPEED = 1.4;
+
+void update_direction(uint index, vec2 pos) {
+    vec2 dist = entities[index].target - pos;
+    float len = length(dist);
+    if (len == 0) {
+        entities[index].direction = vec2(0);
+        return;
+    }
+    vec2 normVec = dist / vec2(len);
+    entities[index].direction = normVec * vec2(SPEED);
+}
+
+vec2 move(uint index) {
+    float dist = distance(entities[index].pos, entities[index].target);
+
+    if (dist > SPEED) {
+        return entities[index].pos + entities[index].direction;
+    }
+
+    vec2 newPos = entities[index].target;
+    entities[index].target = random_Target();
+    update_direction(index, newPos);
+    return newPos;
 }
 
 void shader_main(uint index) {
@@ -916,7 +964,9 @@ void shader_main(uint index) {
     }
 
     if ((pushConsts.tick % 2) == 0) {
-        vec2 newPos = move(index);
+        // update_direction(index, entities[index].pos);
+        // vec2 newPos = move(index);
+        vec2 newPos = random_Target();
         quad_tree_update(index, newPos);
     } else {
         entities[index].color = vec4(0, 1, 0, 1);
@@ -1033,7 +1083,8 @@ void run_default() {
             std::chrono::high_resolution_clock::time_point lastStartCollisionTp = std::chrono::high_resolution_clock::now();
             std::chrono::high_resolution_clock::time_point lastEndCollisionTp = std::chrono::high_resolution_clock::now();
 
-            while (pushConsts.tick < 20000) {
+            // while (pushConsts.tick < 20000) {
+            while (true) {
                 lastStartTp = std::chrono::high_resolution_clock::now();
                 lastStartMoveTp = std::chrono::high_resolution_clock::now();
                 for (size_t index = start; index < end; index++) {
@@ -1051,6 +1102,8 @@ void run_default() {
                 syncPoint.arrive_and_wait();
                 lastEndMoveTp = std::chrono::high_resolution_clock::now();
                 if (i == 0) {
+                    validate_entity_count(NUM_ENTITIES);
+
                     pushConsts.tick++;
                 }
 
@@ -1063,16 +1116,18 @@ void run_default() {
                 syncPoint.arrive_and_wait();
                 lastEndCollisionTp = std::chrono::high_resolution_clock::now();
                 if (i == 0) {
-                    pushConsts.tick++;
-                    std::chrono::nanoseconds durationMove = lastEndMoveTp - lastStartMoveTp;
-                    std::chrono::nanoseconds durationCollision = lastEndCollisionTp - lastStartCollisionTp;
-                    std::chrono::nanoseconds durationAll = std::chrono::high_resolution_clock::now() - lastStartTp;
-                    double secMove = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(durationMove).count()) / 1000;
-                    double secCollision = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(durationCollision).count()) / 1000;
-                    double secAll = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(durationAll).count()) / 1000;
                     validate_entity_count(NUM_ENTITIES);
-                    std::cout << (pushConsts.tick / 2) << "; " << secMove << "; " << secCollision << "; " << secAll << "\n";
-                    std::cerr << (pushConsts.tick / 2) << "; " << secMove << "; " << secCollision << "; " << secAll << "\n";
+
+                    pushConsts.tick++;
+                    // std::chrono::nanoseconds durationMove = lastEndMoveTp - lastStartMoveTp;
+                    // std::chrono::nanoseconds durationCollision = lastEndCollisionTp - lastStartCollisionTp;
+                    // std::chrono::nanoseconds durationAll = std::chrono::high_resolution_clock::now() - lastStartTp;
+                    // double secMove = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(durationMove).count()) / 1000;
+                    // double secCollision = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(durationCollision).count()) / 1000;
+                    // double secAll = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(durationAll).count()) / 1000;
+
+                    // std::cout << (pushConsts.tick / 2) << "; " << secMove << "; " << secCollision << "; " << secAll << "\n";
+                    // std::cerr << (pushConsts.tick / 2) << "; " << secMove << "; " << secCollision << "; " << secAll << "\n";
                     // std::cout << "Shader ticked: " << pushConsts.tick++ << " took " << sec << " seconds\n";
                 }
                 incSyncPoint.arrive_and_wait();
