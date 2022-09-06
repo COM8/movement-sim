@@ -125,7 +125,7 @@ class Simulator {
     void check_device_queues();
     static const std::filesystem::path& get_log_csv_path();
     void prepare_log_csv_file();
-    void write_log_csv_file(uint32_t tick, uint32_t type, std::chrono::nanoseconds duration);
+    void write_log_csv_file(uint32_t tick, std::chrono::nanoseconds durationUpdate, std::chrono::nanoseconds durationCollision, std::chrono::nanoseconds durationAll);
     static std::string get_time_stamp();
 
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API

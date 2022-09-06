@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <kompute/operations/OpTensorSyncDevice.hpp>
 #include <kompute/operations/OpTensorSyncLocal.hpp>
 #include <memory>
@@ -51,7 +52,7 @@ void Simulator::init() {
     mgr = std::make_shared<kp::Manager>();
 
     // Load map:
-    map = Map::load_from_file("/home/fabian/Documents/Repos/movement-sim/munich.json");
+    map = Map::load_from_file("/home/sauter/Documents/Repos/movement-sim/munich.json");
 
     shader = std::vector(RANDOM_MOVE_COMP_SPV.begin(), RANDOM_MOVE_COMP_SPV.end());
 
@@ -223,7 +224,6 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
     calcSeq->eval<kp::OpAlgoDispatch>(algo, pushConsts);
     std::chrono::nanoseconds durationUpdate = std::chrono::high_resolution_clock::now() - updateTickStart;
     updateTickHistory.add_time(durationUpdate);
-    write_log_csv_file(tick, 0, durationUpdate);
     tick = pushConsts[0].tick;
     SPDLOG_DEBUG("Update tick {} ended.", tick);
 
@@ -235,7 +235,8 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
     calcSeq->eval<kp::OpAlgoDispatch>(algo, pushConsts);
     std::chrono::nanoseconds durationCollisionDetection = std::chrono::high_resolution_clock::now() - collisionDetectionTickStart;
     collisionDetectionTickHistory.add_time(durationCollisionDetection);
-    write_log_csv_file(tick, 1, durationCollisionDetection);
+
+    write_log_csv_file(tick, durationUpdate, durationCollisionDetection, durationUpdate + durationCollisionDetection);
     tick = pushConsts[0].tick;
     SPDLOG_DEBUG("Collision detection tick {} ended.", tick);
 
@@ -244,6 +245,7 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
     end_frame_capture();
 #endif
 
+    /*
     bool retrievingEntities = !entities;
     if (retrievingEntities) {
         retrieveEntitiesSeq->evalAsync();
@@ -259,22 +261,6 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
     if (retrievingEntities) {
         retrieveEntitiesSeq->evalAwait();
         entities = std::make_shared<std::vector<Entity>>(tensorEntities->vector<Entity>());
-
-        // for (const Entity& e : *entities) {
-        //     assert(e.target.x >= 0 && e.target.x <= WORLD_SIZE_X);
-        //     assert(e.target.y >= 0 && e.target.y <= WORLD_SIZE_Y);
-        // }
-        /*assert(!entities->empty());
-        for (size_t i = 0; i < 5; i++) {
-            float posX = (*entities)[i].pos.x;
-            float posY = (*entities)[i].pos.y;
-            float targetX = (*entities)[i].target.x;
-            float targetY = (*entities)[i].target.y;
-            float directionX = (*entities)[i].direction.x;
-            float directionY = (*entities)[i].direction.y;
-            unsigned int roadIndex = (*entities)[i].roadIndex;
-            SPDLOG_INFO("Pos: {}/{}, Target: {}/{}, Direction: {}/{}, Road Index: {}", posX, posY, targetX, targetY, directionX, directionY, roadIndex);
-        }*/
     }
 
     if (retrievingQuadTreeLevels) {
@@ -285,7 +271,7 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
     retrieveMiscSeq->evalAwait();
     quadTreeLevelUsedStatus = tensorQuadTreeLevelUsedStatus->vector<uint32_t>();
     quadTreeEntities = tensorQuadTreeEntities->vector<gpu_quad_tree::Entity>();
-    std::vector<uint32_t> debugData = tensorDebugData->vector<uint32_t>();
+    std::vector<uint32_t> debugData = tensorDebugData->vector<uint32_t>();*/
 
     tpsHistory.add_time(std::chrono::high_resolution_clock::now() - tickStart);
 
@@ -356,7 +342,7 @@ const std::filesystem::path& Simulator::get_log_csv_path() {
 
 void Simulator::prepare_log_csv_file() {
     assert(!logFile);
-    logFile = std::make_unique<std::ofstream>(Simulator::get_log_csv_path(), std::ios::out);
+    logFile = std::make_unique<std::ofstream>(Simulator::get_log_csv_path(), std::ios::out | std::ios::app);
     assert(logFile->is_open());
     assert(logFile->good());
 }
@@ -401,9 +387,16 @@ std::string Simulator::get_time_stamp() {
     return hourStr + ":" + minStr + ":" + secStr + "." + msStr;
 }
 
-void Simulator::write_log_csv_file(uint32_t tick, uint32_t type, std::chrono::nanoseconds duration) {
+void Simulator::write_log_csv_file(uint32_t tick, std::chrono::nanoseconds durationUpdate, std::chrono::nanoseconds durationCollision, std::chrono::nanoseconds durationAll) {
     assert(logFile);
-    (*logFile) << Simulator::get_time_stamp() << ";" << std::to_string(tick) << ";" << std::to_string(type) << ";" << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "\n";
+    assert(logFile->is_open());
+    assert(logFile->good());
+    double secUpdate = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(durationUpdate).count()) / 1000;
+    double secCollision = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(durationCollision).count()) / 1000;
+    double secAll = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(durationAll).count()) / 1000;
+
+    (*logFile) << Simulator::get_time_stamp() << ";" << std::to_string(tick / 2) << ";" << secUpdate << ";" << secCollision << ";" << secAll << "\n";
+    std::cerr << Simulator::get_time_stamp() << ";" << std::to_string(tick / 2) << ";" << secUpdate << ";" << secCollision << ";" << secAll << "\n";
     logFile->flush();
 }
 
