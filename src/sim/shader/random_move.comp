@@ -849,6 +849,12 @@ vec2 move(uint index) {
     return newPos;
 }
 
+vec2 random_pos(uint index) {
+    float targetX = next_float(entities[index].randState) *  pushConsts.worldSizeX;
+    float targetY = next_float(entities[index].randState) *  pushConsts.worldSizeY;
+    return vec2(targetX, targetY);
+}
+
 void main() {
     uint index = gl_GlobalInvocationID.x;
 
@@ -861,6 +867,7 @@ void main() {
     if((pushConsts.tick % 2) == 0) {
         update_direction(index, entities[index].pos);
         vec2 newPos = move(index);
+        // vec2 newPos = random_pos(index);
         quad_tree_update(index, newPos);
     }
     else {
