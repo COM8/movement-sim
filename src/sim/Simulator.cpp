@@ -336,7 +336,7 @@ void Simulator::check_device_queues() {
 }
 
 const std::filesystem::path& Simulator::get_log_csv_path() {
-    static const std::filesystem::path LOG_CSV_PATH{"simulator_logs.csv"};
+    static const std::filesystem::path LOG_CSV_PATH{std::to_string(MAX_ENTITIES) + ".csv"};
     return LOG_CSV_PATH;
 }
 
