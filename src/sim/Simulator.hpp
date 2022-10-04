@@ -35,7 +35,7 @@ constexpr float MAX_RENDER_RESOLUTION_X = 8192;  // Larger values result in erro
 constexpr float MAX_RENDER_RESOLUTION_Y = 8192;
 
 constexpr size_t QUAD_TREE_MAX_DEPTH = 8;
-constexpr size_t QUAD_TREE_ENTITY_LEVEL_CAP = 10;
+constexpr size_t QUAD_TREE_ENTITY_NODE_CAP = 10;
 
 /**
  * Specifies the collision radius in meters.
@@ -77,12 +77,12 @@ class Simulator {
 
     // -----------------QuadTree-----------------
     std::vector<gpu_quad_tree::Entity> quadTreeEntities;
-    std::shared_ptr<std::vector<gpu_quad_tree::Level>> quadTreeLevels{std::make_shared<std::vector<gpu_quad_tree::Level>>()};
-    std::vector<uint32_t> quadTreeLevelUsedStatus;
+    std::shared_ptr<std::vector<gpu_quad_tree::Node>> quadTreeNodes{std::make_shared<std::vector<gpu_quad_tree::Node>>()};
+    std::vector<uint32_t> quadTreeNodeUsedStatus;
 
     std::shared_ptr<kp::Tensor> tensorQuadTreeEntities{nullptr};
-    std::shared_ptr<kp::Tensor> tensorQuadTreeLevels{nullptr};
-    std::shared_ptr<kp::Tensor> tensorQuadTreeLevelUsedStatus{nullptr};
+    std::shared_ptr<kp::Tensor> tensorQuadTreeNodes{nullptr};
+    std::shared_ptr<kp::Tensor> tensorQuadTreeNodeUsedStatus{nullptr};
     // ------------------------------------------
 
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
@@ -113,14 +113,14 @@ class Simulator {
     [[nodiscard]] const utils::TickDurationHistory& get_update_tick_history() const;
     [[nodiscard]] const utils::TickDurationHistory& get_collision_detection_tick_history() const;
     std::shared_ptr<std::vector<Entity>> get_entities();
-    std::shared_ptr<std::vector<gpu_quad_tree::Level>> get_quad_tree_levels();
+    std::shared_ptr<std::vector<gpu_quad_tree::Node>> get_quad_tree_nodes();
     [[nodiscard]] const std::shared_ptr<Map> get_map() const;
 
     [[nodiscard]] bool is_initialized() const;
 
  private:
     void sim_worker();
-    void sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveEntitiesSeq, std::shared_ptr<kp::Sequence>& retrieveQuadTreeLevelsSeq, std::shared_ptr<kp::Sequence>& retrieveMiscSeq);
+    void sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveEntitiesSeq, std::shared_ptr<kp::Sequence>& retrieveQuadTreeNodesSeq, std::shared_ptr<kp::Sequence>& retrieveMiscSeq);
     void add_entities();
     void check_device_queues();
     static const std::filesystem::path& get_log_csv_path();

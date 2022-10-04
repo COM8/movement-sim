@@ -7,11 +7,11 @@
 #include <epoxy/gl_generated.h>
 
 namespace ui::widgets::opengl {
-void QuadTreeGridGlObject::set_quad_tree_levels(const std::shared_ptr<std::vector<sim::gpu_quad_tree::Level>>& levels) {
+void QuadTreeGridGlObject::set_quad_tree_nodes(const std::shared_ptr<std::vector<sim::gpu_quad_tree::Node>>& nodes) {
     // Transform to points:
     vertices.clear();
     GLsizei newVerticesCount = 0;
-    add_level_rec(levels, (*levels)[0], newVerticesCount);
+    add_node_rec(nodes, (*nodes)[0], newVerticesCount);
     bool sameSize = newVerticesCount == verticesCount;
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -27,26 +27,26 @@ void QuadTreeGridGlObject::set_quad_tree_levels(const std::shared_ptr<std::vecto
     GLERR;
 }
 
-void QuadTreeGridGlObject::add_level_rec(const std::shared_ptr<std::vector<sim::gpu_quad_tree::Level>>& levels, const sim::gpu_quad_tree::Level& level, GLsizei& newVerticesCount) {
-    vertices.push_back({level.offsetX, level.offsetY});  // Top Left
-    vertices.push_back({level.offsetX + level.width, level.offsetY});  // Top Right
+void QuadTreeGridGlObject::add_node_rec(const std::shared_ptr<std::vector<sim::gpu_quad_tree::Node>>& nodes, const sim::gpu_quad_tree::Node& node, GLsizei& newVerticesCount) {
+    vertices.push_back({node.offsetX, node.offsetY});  // Top Left
+    vertices.push_back({node.offsetX + node.width, node.offsetY});  // Top Right
 
-    vertices.push_back({level.offsetX + level.width, level.offsetY});  // Top Right
-    vertices.push_back({level.offsetX + level.width, level.offsetY + level.height});  // Bottom Right
+    vertices.push_back({node.offsetX + node.width, node.offsetY});  // Top Right
+    vertices.push_back({node.offsetX + node.width, node.offsetY + node.height});  // Bottom Right
 
-    vertices.push_back({level.offsetX + level.width, level.offsetY + level.height});  // Bottom Right
-    vertices.push_back({level.offsetX, level.offsetY + level.height});  // Bottom Left
+    vertices.push_back({node.offsetX + node.width, node.offsetY + node.height});  // Bottom Right
+    vertices.push_back({node.offsetX, node.offsetY + node.height});  // Bottom Left
 
-    vertices.push_back({level.offsetX, level.offsetY + level.height});  // Bottom Left
-    vertices.push_back({level.offsetX, level.offsetY});  // Top Left
+    vertices.push_back({node.offsetX, node.offsetY + node.height});  // Bottom Left
+    vertices.push_back({node.offsetX, node.offsetY});  // Top Left
 
     newVerticesCount += 8;
 
-    if (level.contentType == sim::gpu_quad_tree::NextType::LEVEL) {
-        add_level_rec(levels, (*levels)[level.nextTL], newVerticesCount);
-        add_level_rec(levels, (*levels)[level.nextTR], newVerticesCount);
-        add_level_rec(levels, (*levels)[level.nextBL], newVerticesCount);
-        add_level_rec(levels, (*levels)[level.nextBR], newVerticesCount);
+    if (node.contentType == sim::gpu_quad_tree::NextType::NODE) {
+        add_node_rec(nodes, (*nodes)[node.nextTL], newVerticesCount);
+        add_node_rec(nodes, (*nodes)[node.nextTR], newVerticesCount);
+        add_node_rec(nodes, (*nodes)[node.nextBL], newVerticesCount);
+        add_node_rec(nodes, (*nodes)[node.nextBR], newVerticesCount);
     }
 }
 

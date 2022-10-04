@@ -104,12 +104,12 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
             }
         }
 
-        bool quadTreeLevelsChanged = false;
+        bool quadTreeNodesChanged = false;
         if (enableUiUpdates) {
-            std::shared_ptr<std::vector<sim::gpu_quad_tree::Level>> quadTreeLevels = simulator->get_quad_tree_levels();
-            if (quadTreeLevels) {
-                quadTreeLevelsChanged = true;
-                this->quadTreeLevels = std::move(quadTreeLevels);
+            std::shared_ptr<std::vector<sim::gpu_quad_tree::Node>> quadTreeNodes = simulator->get_quad_tree_nodes();
+            if (quadTreeNodes) {
+                quadTreeNodesChanged = true;
+                this->quadTreeNodes = std::move(quadTreeNodes);
             }
         }
 
@@ -153,13 +153,13 @@ bool SimulationWidget::on_render_handler(const Glib::RefPtr<Gdk::GLContext>& /*c
         }
 
         // 3.0 Draw quad tree to buffer:
-        if (quadTreeLevelsChanged && quadTreeGridVisible) {
+        if (quadTreeNodesChanged && quadTreeGridVisible) {
             quadTreeGridFrameBuffer.bind();
             glClearColor(0, 0, 0, 0);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
             GLERR;
 
-            quadTreeGridGlObj.set_quad_tree_levels(quadTreeLevels);
+            quadTreeGridGlObj.set_quad_tree_nodes(quadTreeNodes);
             GLERR;
             quadTreeGridGlObj.render();
             GLERR;

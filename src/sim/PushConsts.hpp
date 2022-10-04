@@ -10,9 +10,9 @@ struct PushConsts {
     float worldSizeX{0};
     float worldSizeY{0};
 
-    uint32_t levelCount{0};
+    uint32_t nodeCount{0};
     uint32_t maxDepth{0};
-    uint32_t entityLevelCap{0};
+    uint32_t entityNodeCap{0};
 
     float collisionRadius{0};
 

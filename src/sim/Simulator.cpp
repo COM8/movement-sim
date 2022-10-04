@@ -52,7 +52,7 @@ void Simulator::init() {
     mgr = std::make_shared<kp::Manager>();
 
     // Load map:
-    map = Map::load_from_file("/home/sauter/Documents/Repos/movement-sim/munich.json");
+    map = Map::load_from_file("/home/fabian/Documents/Repos/movement-sim/munich.json");
 
     shader = std::vector(RANDOM_MOVE_COMP_SPV.begin(), RANDOM_MOVE_COMP_SPV.end());
 
@@ -69,34 +69,34 @@ void Simulator::init() {
     quadTreeEntities.resize(MAX_ENTITIES);
     tensorQuadTreeEntities = mgr->tensor(quadTreeEntities.data(), quadTreeEntities.size(), sizeof(gpu_quad_tree::Entity), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
-    assert(gpu_quad_tree::calc_level_count(1) == 1);
-    assert(gpu_quad_tree::calc_level_count(2) == 5);
-    assert(gpu_quad_tree::calc_level_count(3) == 21);
-    assert(gpu_quad_tree::calc_level_count(4) == 85);
-    assert(gpu_quad_tree::calc_level_count(8) == 21845);
+    assert(gpu_quad_tree::calc_node_count(1) == 1);
+    assert(gpu_quad_tree::calc_node_count(2) == 5);
+    assert(gpu_quad_tree::calc_node_count(3) == 21);
+    assert(gpu_quad_tree::calc_node_count(4) == 85);
+    assert(gpu_quad_tree::calc_node_count(8) == 21845);
 
-    quadTreeLevels->resize(gpu_quad_tree::calc_level_count(QUAD_TREE_MAX_DEPTH));
-    gpu_quad_tree::init_level_zero((*quadTreeLevels)[0], map->width, map->height);
-    tensorQuadTreeLevels = mgr->tensor(quadTreeLevels->data(), quadTreeLevels->size(), sizeof(gpu_quad_tree::Level), kp::Tensor::TensorDataTypes::eUnsignedInt);
+    quadTreeNodes->resize(gpu_quad_tree::calc_node_count(QUAD_TREE_MAX_DEPTH));
+    gpu_quad_tree::init_node_zero((*quadTreeNodes)[0], map->width, map->height);
+    tensorQuadTreeNodes = mgr->tensor(quadTreeNodes->data(), quadTreeNodes->size(), sizeof(gpu_quad_tree::Node), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
-    quadTreeLevelUsedStatus.resize(quadTreeLevels->size() + 2);  // +2 since one is used as lock and one as next pointer
-    quadTreeLevelUsedStatus[1] = 2;  // Pointer to the first free level index;
-    tensorQuadTreeLevelUsedStatus = mgr->tensor(quadTreeLevelUsedStatus.data(), quadTreeLevelUsedStatus.size(), sizeof(uint32_t), kp::Tensor::TensorDataTypes::eUnsignedInt);
+    quadTreeNodeUsedStatus.resize(quadTreeNodes->size() + 2);  // +2 since one is used as lock and one as next pointer
+    quadTreeNodeUsedStatus[1] = 2;  // Pointer to the first free node index;
+    tensorQuadTreeNodeUsedStatus = mgr->tensor(quadTreeNodeUsedStatus.data(), quadTreeNodeUsedStatus.size(), sizeof(uint32_t), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
     // Debug data:
     std::vector<uint32_t> debugData;
     debugData.resize(10);
     tensorDebugData = mgr->tensor(debugData.data(), debugData.size(), sizeof(uint32_t), kp::Tensor::TensorDataTypes::eUnsignedInt);
 
-    params = {tensorEntities, tensorConnections, tensorRoads, tensorQuadTreeLevels, tensorQuadTreeEntities, tensorQuadTreeLevelUsedStatus, tensorDebugData};
+    params = {tensorEntities, tensorConnections, tensorRoads, tensorQuadTreeNodes, tensorQuadTreeEntities, tensorQuadTreeNodeUsedStatus, tensorDebugData};
 
     // Push constants:
     pushConsts.emplace_back();
     pushConsts[0].worldSizeX = map->width;
     pushConsts[0].worldSizeY = map->height;
-    pushConsts[0].levelCount = static_cast<uint32_t>(quadTreeLevels->size());
+    pushConsts[0].nodeCount = static_cast<uint32_t>(quadTreeNodes->size());
     pushConsts[0].maxDepth = QUAD_TREE_MAX_DEPTH;
-    pushConsts[0].entityLevelCap = QUAD_TREE_ENTITY_LEVEL_CAP;
+    pushConsts[0].entityNodeCap = QUAD_TREE_ENTITY_NODE_CAP;
     pushConsts[0].collisionRadius = COLLISION_RADIUS;
     pushConsts[0].tick = 1;
 
@@ -146,9 +146,9 @@ std::shared_ptr<std::vector<Entity>> Simulator::get_entities() {
     return result;
 }
 
-std::shared_ptr<std::vector<gpu_quad_tree::Level>> Simulator::get_quad_tree_levels() {
-    std::shared_ptr<std::vector<gpu_quad_tree::Level>> result = std::move(quadTreeLevels);
-    quadTreeLevels = nullptr;
+std::shared_ptr<std::vector<gpu_quad_tree::Node>> Simulator::get_quad_tree_nodes() {
+    std::shared_ptr<std::vector<gpu_quad_tree::Node>> result = std::move(quadTreeNodes);
+    quadTreeNodes = nullptr;
     return result;
 }
 
@@ -195,8 +195,8 @@ void Simulator::sim_worker() {
     // Prepare retrieve sequences:
     std::shared_ptr<kp::Sequence> calcSeq = mgr->sequence()->record<kp::OpAlgoDispatch>(algo);
     std::shared_ptr<kp::Sequence> retrieveEntitiesSeq = mgr->sequence()->record<kp::OpTensorSyncLocal>({tensorEntities});
-    std::shared_ptr<kp::Sequence> retrieveQuadTreeLevelsSeq = mgr->sequence()->record<kp::OpTensorSyncLocal>({tensorQuadTreeLevels});
-    std::shared_ptr<kp::Sequence> retrieveMiscSeq = mgr->sequence()->record<kp::OpTensorSyncLocal>({tensorQuadTreeLevelUsedStatus, tensorQuadTreeEntities, tensorDebugData});
+    std::shared_ptr<kp::Sequence> retrieveQuadTreeNodesSeq = mgr->sequence()->record<kp::OpTensorSyncLocal>({tensorQuadTreeNodes});
+    std::shared_ptr<kp::Sequence> retrieveMiscSeq = mgr->sequence()->record<kp::OpTensorSyncLocal>({tensorQuadTreeNodeUsedStatus, tensorQuadTreeEntities, tensorDebugData});
 
     std::unique_lock<std::mutex> lk(waitMutex);
     while (state == SimulatorState::RUNNING) {
@@ -206,11 +206,11 @@ void Simulator::sim_worker() {
         if (!simulating) {
             continue;
         }
-        sim_tick(calcSeq, retrieveEntitiesSeq, retrieveQuadTreeLevelsSeq, retrieveMiscSeq);
+        sim_tick(calcSeq, retrieveEntitiesSeq, retrieveQuadTreeNodesSeq, retrieveMiscSeq);
     }
 }
 
-void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveEntitiesSeq, std::shared_ptr<kp::Sequence>& retrieveQuadTreeLevelsSeq, std::shared_ptr<kp::Sequence>& retrieveMiscSeq) {
+void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr<kp::Sequence>& retrieveEntitiesSeq, std::shared_ptr<kp::Sequence>& retrieveQuadTreeNodesSeq, std::shared_ptr<kp::Sequence>& retrieveMiscSeq) {
     std::chrono::high_resolution_clock::time_point tickStart = std::chrono::high_resolution_clock::now();
 
 #ifdef MOVEMENT_SIMULATOR_ENABLE_RENDERDOC_API
@@ -251,9 +251,9 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
         retrieveEntitiesSeq->evalAsync();
     }
 
-    bool retrievingQuadTreeLevels = !quadTreeLevels;
-    if (retrievingQuadTreeLevels) {
-        retrieveQuadTreeLevelsSeq->evalAsync();
+    bool retrievingQuadTreeNodes = !quadTreeNodes;
+    if (retrievingQuadTreeNodes) {
+        retrieveQuadTreeNodesSeq->evalAsync();
     }
 
     retrieveMiscSeq->evalAsync();
@@ -263,13 +263,13 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
         entities = std::make_shared<std::vector<Entity>>(tensorEntities->vector<Entity>());
     }
 
-    if (retrievingQuadTreeLevels) {
-        retrieveQuadTreeLevelsSeq->evalAwait();
-        quadTreeLevels = std::make_shared<std::vector<gpu_quad_tree::Level>>(tensorQuadTreeLevels->vector<gpu_quad_tree::Level>());
+    if (retrievingQuadTreeNodes) {
+        retrieveQuadTreeNodesSeq->evalAwait();
+        quadTreeNodes = std::make_shared<std::vector<gpu_quad_tree::Node>>(tensorQuadTreeNodes->vector<gpu_quad_tree::Node>());
     }
 
     retrieveMiscSeq->evalAwait();
-    quadTreeLevelUsedStatus = tensorQuadTreeLevelUsedStatus->vector<uint32_t>();
+    quadTreeNodeUsedStatus = tensorQuadTreeNodeUsedStatus->vector<uint32_t>();
     quadTreeEntities = tensorQuadTreeEntities->vector<gpu_quad_tree::Entity>();
     std::vector<uint32_t> debugData = tensorDebugData->vector<uint32_t>();*/
 
