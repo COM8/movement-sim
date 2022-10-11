@@ -245,7 +245,6 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
     end_frame_capture();
 #endif
 
-    /*
     bool retrievingEntities = !entities;
     if (retrievingEntities) {
         retrieveEntitiesSeq->evalAsync();
@@ -271,7 +270,7 @@ void Simulator::sim_tick(std::shared_ptr<kp::Sequence>& calcSeq, std::shared_ptr
     retrieveMiscSeq->evalAwait();
     quadTreeNodeUsedStatus = tensorQuadTreeNodeUsedStatus->vector<uint32_t>();
     quadTreeEntities = tensorQuadTreeEntities->vector<gpu_quad_tree::Entity>();
-    std::vector<uint32_t> debugData = tensorDebugData->vector<uint32_t>();*/
+    std::vector<uint32_t> debugData = tensorDebugData->vector<uint32_t>();
 
     tpsHistory.add_time(std::chrono::high_resolution_clock::now() - tickStart);
 
