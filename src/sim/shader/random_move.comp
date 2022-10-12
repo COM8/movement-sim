@@ -741,7 +741,8 @@ float next_float(inout uvec4 state) {
 }
 
 uint next(inout uvec4 state, uint min, uint max) {
-    return uint(round(float(min) + (next_float(state) * float(max - min))));
+    // "+1" and "-1" to fix border probabilities
+    return uint(ceil(float(min) + (next_float(state) * float(max - min + 1)))) - 1;
 }
 
 // ------------------------------------------------------------------------------------
@@ -803,6 +804,7 @@ void new_target(uint index) {
     }
     else {
         // Skip our own road:
+        // In theory here we should get a random number in range [1, curCoord.connectedCount - 1] but there is something broken wth the connectedCount.
         uint newRoadOffset = next(entities[index].randState, 1, curCoord.connectedCount);
         newRoadIndex = connections[curCoord.connectedIndex + newRoadOffset];
     }
